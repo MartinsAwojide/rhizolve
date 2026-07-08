@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -8,6 +10,7 @@ class ModeSwitchCard(BaseModel):
     system_or_process_context: str | None = None
     maturity: str | None = None
     maturity_source: str | None = None
+    prominence: Literal["full", "compact"] = "full"
     actions: list[str] = [
         "Start investigation",
         "Edit settings",

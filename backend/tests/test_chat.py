@@ -51,3 +51,32 @@ async def test_normal_message_keeps_thread_id(async_client):
     body = r.json()
     assert body["thread_id"] == "main-001"
     assert body["ephemeral"] is False
+
+
+@pytest.mark.asyncio
+async def test_deep_mode_returns_full_prominence_card_by_default(async_client):
+    r = await async_client.post(
+        "/api/v1/chat",
+        json={
+            "message": "Trucks keep hitting the loading-bay walls",
+            "mode": "deep",
+        },
+    )
+    card = r.json()["mode_switch_card"]
+    assert card is not None
+    assert card["prominence"] == "full"
+
+
+@pytest.mark.asyncio
+async def test_quiet_mode_still_returns_card_compact(async_client):
+    r = await async_client.post(
+        "/api/v1/chat",
+        json={
+            "message": "Trucks keep hitting the loading-bay walls, help me find out why",
+            "mode": "deep",
+            "verbosity": "quiet",
+        },
+    )
+    card = r.json()["mode_switch_card"]
+    assert card is not None
+    assert card["prominence"] == "compact"
