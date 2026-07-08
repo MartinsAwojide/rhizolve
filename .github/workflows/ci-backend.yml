@@ -1,0 +1,54 @@
+name: CI Backend
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci-backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci-backend.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --all-extras --dev
+
+      - name: Ruff check
+        working-directory: backend
+        run: uv run ruff check .
+
+      - name: Mypy
+        working-directory: backend
+        run: uv run mypy .
+
+      - name: Pytest
+        working-directory: backend
+        env:
+          REDIS_URL: redis://localhost:6379
+        run: uv run pytest
