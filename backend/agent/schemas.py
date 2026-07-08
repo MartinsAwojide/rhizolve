@@ -25,3 +25,10 @@ class ChatResponse(BaseModel):
     ephemeral: bool = False
     mode_switch_card: ModeSwitchCard | None = None
     active_mode: str = "shallow"
+
+
+class ExtractionOutput(BaseModel):
+    phenomenon: str | None = None
+    domain: str | None = None
+    system_or_process_context: str | None = None
+    confidence: dict[str, float] = {}
