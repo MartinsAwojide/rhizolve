@@ -3,7 +3,7 @@ import uuid
 import pytest
 from langgraph.checkpoint.base import empty_checkpoint
 
-from core.memory import make_checkpointer
+from core.memory import make_checkpointer, make_store
 
 
 @pytest.fixture
@@ -33,3 +33,13 @@ async def test_state_persists_across_instances():
     result = await c2.aget_tuple(config)
     assert result is not None
     await ctx2.__aexit__(None, None, None)
+
+
+@pytest.mark.asyncio
+async def test_store_put_and_get_roundtrip():
+    store, ctx = await make_store()
+    await store.aput(("test-ns",), "key1", {"value": "hello"})
+    result = await store.aget(("test-ns",), "key1")
+    assert result is not None
+    assert result.value == {"value": "hello"}
+    await ctx.__aexit__(None, None, None)
