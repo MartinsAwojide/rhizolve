@@ -1,7 +1,21 @@
+from contextlib import asynccontextmanager
+
+import redis.asyncio as redis
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from redis.exceptions import RedisError
 
-app = FastAPI()
+from core.config import REDIS_URL
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.redis = redis.from_url(REDIS_URL)
+    yield
+    await app.state.redis.aclose()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,4 +27,9 @@ app.add_middleware(
 
 @app.get("/api/v1/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok"}
+    try:
+        await app.state.redis.ping()
+        redis_status = "connected"
+    except RedisError:
+        redis_status = "unreachable"
+    return {"status": "ok", "redis": redis_status}
