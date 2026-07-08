@@ -24,3 +24,4 @@ class ChatResponse(BaseModel):
     thread_id: str = ""
     ephemeral: bool = False
     mode_switch_card: ModeSwitchCard | None = None
+    active_mode: str = "shallow"

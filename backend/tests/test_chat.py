@@ -80,3 +80,37 @@ async def test_quiet_mode_still_returns_card_compact(async_client):
     card = r.json()["mode_switch_card"]
     assert card is not None
     assert card["prominence"] == "compact"
+
+
+@pytest.mark.asyncio
+async def test_just_answer_keeps_deep_mode_primed(async_client):
+    r = await async_client.post(
+        "/api/v1/chat",
+        json={
+            "message": "why do our trucks keep hitting walls",
+            "mode": "deep",
+            "action": "just_answer",
+        },
+    )
+    body = r.json()
+    assert body["graph_invoked"] is False
+    assert body["active_mode"] == "deep"
+
+
+@pytest.mark.asyncio
+async def test_deep_without_action_still_invokes_graph_stub(async_client):
+    r = await async_client.post(
+        "/api/v1/chat",
+        json={"message": "Trucks keep hitting the loading-bay walls", "mode": "deep"},
+    )
+    body = r.json()
+    assert body["graph_invoked"] is True
+    assert body["active_mode"] == "deep"
+
+
+@pytest.mark.asyncio
+async def test_active_mode_echoes_shallow_mode(async_client):
+    r = await async_client.post(
+        "/api/v1/chat", json={"message": "What is 5 Whys?", "mode": "shallow"}
+    )
+    assert r.json()["active_mode"] == "shallow"

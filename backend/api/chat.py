@@ -17,6 +17,7 @@ class ChatRequest(BaseModel):
     mode: str = "shallow"
     thread_id: str = "default"
     verbosity: Literal["verbose", "quiet"] = "verbose"
+    action: Literal["just_answer", "start_investigation"] | None = None
 
 
 @router.post("/chat")
@@ -29,7 +30,13 @@ async def chat(payload: ChatRequest) -> ChatResponse:
     )
 
     agent = ConversationalAgent(llm_client=get_llm_client())
-    result = await agent.handle(message, mode=payload.mode)
+
+    if payload.mode == "deep" and payload.action == "just_answer":
+        result = await agent.handle(message, mode="shallow")
+        active_mode = "deep"
+    else:
+        result = await agent.handle(message, mode=payload.mode)
+        active_mode = payload.mode
 
     mode_switch_card = None
     if payload.mode == "deep":
@@ -43,4 +50,5 @@ async def chat(payload: ChatRequest) -> ChatResponse:
         thread_id=thread_id,
         ephemeral=ephemeral,
         mode_switch_card=mode_switch_card,
+        active_mode=active_mode,
     )
