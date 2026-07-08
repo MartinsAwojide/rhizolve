@@ -14,13 +14,16 @@ async def test_shallow_does_not_invoke_graph(async_client):
 
 
 @pytest.mark.asyncio
-async def test_deep_does_not_error(async_client):
+async def test_deep_without_action_awaits_confirmation(async_client):
     r = await async_client.post(
         "/api/v1/chat",
         json={"message": "Trucks keep hitting the loading-bay walls", "mode": "deep"},
     )
     assert r.status_code == 200
-    assert r.json()["graph_invoked"] is True
+    body = r.json()
+    assert body["graph_invoked"] is False
+    assert body["active_mode"] == "deep"
+    assert body["mode_switch_card"] is not None
 
 
 @pytest.mark.asyncio
@@ -98,10 +101,14 @@ async def test_just_answer_keeps_deep_mode_primed(async_client):
 
 
 @pytest.mark.asyncio
-async def test_deep_without_action_still_invokes_graph_stub(async_client):
+async def test_start_investigation_invokes_graph_stub(async_client):
     r = await async_client.post(
         "/api/v1/chat",
-        json={"message": "Trucks keep hitting the loading-bay walls", "mode": "deep"},
+        json={
+            "message": "Trucks keep hitting the loading-bay walls",
+            "mode": "deep",
+            "action": "start_investigation",
+        },
     )
     body = r.json()
     assert body["graph_invoked"] is True

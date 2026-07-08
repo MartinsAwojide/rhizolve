@@ -31,11 +31,19 @@ async def chat(payload: ChatRequest) -> ChatResponse:
 
     agent = ConversationalAgent(llm_client=get_llm_client())
 
-    if payload.mode == "deep" and payload.action == "just_answer":
-        result = await agent.handle(message, mode="shallow")
+    if payload.mode == "deep":
         active_mode = "deep"
+        if payload.action == "start_investigation":
+            result = await agent.handle(message, mode="deep")
+            response_text, graph_invoked = result.response, result.graph_invoked
+        elif payload.action == "just_answer":
+            result = await agent.handle(message, mode="shallow")
+            response_text, graph_invoked = result.response, result.graph_invoked
+        else:
+            response_text, graph_invoked = None, False
     else:
         result = await agent.handle(message, mode=payload.mode)
+        response_text, graph_invoked = result.response, result.graph_invoked
         active_mode = payload.mode
 
     mode_switch_card = None
@@ -45,8 +53,8 @@ async def chat(payload: ChatRequest) -> ChatResponse:
         )
 
     return ChatResponse(
-        response=result.response,
-        graph_invoked=result.graph_invoked,
+        response=response_text,
+        graph_invoked=graph_invoked,
         thread_id=thread_id,
         ephemeral=ephemeral,
         mode_switch_card=mode_switch_card,
