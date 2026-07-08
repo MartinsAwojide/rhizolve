@@ -27,7 +27,7 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ../frontend/web:/app
+      - ../frontend/web/src:/app/src
     depends_on:
       - backend
 
