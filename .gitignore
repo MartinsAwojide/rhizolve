@@ -1,1 +1,7 @@
 .claude/logs/
+.venv/
+.pytest_cache/
+dist/
+node_modules/
+__pycache__/
+*.pyc
