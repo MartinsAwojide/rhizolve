@@ -1,0 +1,8 @@
+/* Rhizolve — global CSS entry point.
+   Consumers link THIS file. It is a list of @import lines only; every token and
+   font-face file below is shipped to consumers. Do not inline rules here. */
+
+@import url('./tokens/fonts.css');
+@import url('./tokens/colors.css');
+@import url('./tokens/typography.css');
+@import url('./tokens/spacing.css');

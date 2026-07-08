@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Investigation workspace" description="Rhizolve three-column investigation workspace — sidebar, chat with interrupt cards, and the interactive why-tree." -->
+<helmet>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="./ds-base.js"></script>
+</helmet>
+<div id="rz-workspace-root" style="height:100vh;width:100%"></div>
+<x-import component-from-global-scope="RzWorkspaceLoader" from="./InvestigationWorkspace.jsx" hint-size="1px,1px" style="display:none;position:absolute;width:0;height:0;overflow:hidden"></x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    // x-import transpiles InvestigationWorkspace.jsx and registers it on window.
+    // We mount it ourselves with the page's own React/ReactDOM so the component's
+    // hooks share that instance's dispatcher (x-import renders with a different
+    // React instance, which would null the hook dispatcher).
+    const mount = () => {
+      const R = window.React, RD = window.ReactDOM, C = window.InvestigationWorkspace;
+      const host = document.getElementById('rz-workspace-root');
+      if (R && RD && C && host) {
+        if (!host._rzMounted) {
+          host._rzMounted = true;
+          RD.createRoot(host).render(R.createElement(C));
+        }
+      } else {
+        setTimeout(mount, 40);
+      }
+    };
+    mount();
+  }
+}
+</script>
+</body>
+</html>

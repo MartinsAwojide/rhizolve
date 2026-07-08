@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" font-family="Inter, sans-serif">
+  <title>Rhizolve logo — light mode</title>
+  
+  <circle cx="28" cy="26" r="11" fill="none" stroke="#0C447C" stroke-width="3"></circle>
+  <path d="M28,37 L28,58 L52,58 L52,70" fill="none" stroke="#5E625F" stroke-width="2.5"></path>
+  <path d="M28,58 L14,58 L14,66" fill="none" stroke="#5E625F" stroke-width="2.5"></path>
+  <circle cx="52" cy="74" r="7" fill="#D85A30"></circle>
+  <circle cx="14" cy="70" r="4" fill="none" stroke="#5E625F" stroke-width="2"></circle>
+  <text x="84" y="60" font-size="34" font-weight="500" fill="#1C2024">Rhizolve</text>
+</svg>

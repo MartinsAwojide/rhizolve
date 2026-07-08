@@ -1,0 +1,21 @@
+/* Rhizolve spacing, radius, sizing tokens.
+   8px-based scale (xs 4 → xl 24). Controls 8px radius, cards 12px, pills fully rounded.
+   Touch targets on Android never below 48dp; Gemba result buttons are 56dp for glove use. */
+
+:root {
+  /* ---- Spacing (8px base) ---- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  /* ---- Radius ---- */
+  --radius-control: 8px;    /* buttons, inputs, chips */
+  --radius-card:    12px;   /* cards, panels */
+  --radius-pill:    9999px; /* pills, status dots, badges */
+
+  /* ---- Touch targets (field surface) ---- */
+  --touch-min:  48px;  /* Android minimum */
+  --touch-gemba: 56px; /* Gemba result buttons — glove-tappable */
+}

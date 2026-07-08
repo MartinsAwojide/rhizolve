@@ -1,0 +1,27 @@
+/* Rhizolve typography tokens.
+   Two-typeface split: sans (Inter) for all UI chrome; serif voice (Source Serif 4)
+   for anything the AI authors — TL;DR, shallow answers, agent commentary.
+   Mono (JetBrains Mono) for hashes, investigation IDs, signatures.
+   Two weights only across the system: 400 regular, 500 medium.
+   Sentence case everywhere, including headings and labels. */
+
+:root {
+  /* ---- Families ---- */
+  --font-sans:  'Inter', system-ui, -apple-system, sans-serif;
+  --font-voice: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* ---- Weights (only two are used) ---- */
+  --weight-regular: 400;
+  --weight-medium:  500;
+
+  /* ---- Type scale (px sizes paired with line-heights) ---- */
+  --text-caption-size: 12px;   --text-caption-lh: 1.4;   /* labels, meta, badges */
+  --text-body-size:    16px;   --text-body-lh:    1.7;   /* body + chat */
+  --text-h3-size:      16px;   --text-h3-weight:  500;   /* card titles */
+  --text-h2-size:      18px;   --text-h2-weight:  500;   /* section headings */
+  --text-h1-size:      22px;   --text-h1-weight:  500;   /* page titles */
+
+  /* ---- Mono is set one notch down for inline hashes ---- */
+  --text-mono-size: 13px;      --text-mono-lh: 1.5;
+}

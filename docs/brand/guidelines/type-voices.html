@@ -1,0 +1,29 @@
+<!-- @dsCard group="Type" viewport="700x220" name="Two voices — sans vs serif" subtitle="The typeface tells the user who is speaking before they read a word" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-0); font-family: var(--font-sans); padding: 22px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .tag { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 8px; }
+  .tok { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="card">
+      <div class="tag">UI chrome · you</div>
+      <div style="font-family:var(--font-sans);font-size:15px;line-height:1.5;color:var(--text-primary)">The gasket on station 3 was replaced last week.</div>
+      <div class="tok">--font-sans · Inter</div>
+    </div>
+    <div class="card">
+      <div class="tag">AI voice · agent</div>
+      <div style="font-family:var(--font-voice);font-size:16px;line-height:1.6;color:var(--text-primary)">Then the wear pattern points elsewhere — most likely a torque drift at the upstream fastener.</div>
+      <div class="tok">--font-voice · Source Serif 4</div>
+    </div>
+  </div>
+</body>
+</html>

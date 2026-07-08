@@ -1,0 +1,23 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Semantic roles — dark" subtitle="Brightened for the navy surface, checked independently at AA" -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-0); font-family: var(--font-sans); padding: 20px; }
+  .row { display: flex; gap: 14px; }
+  .sw { flex: 1; }
+  .chip { height: 44px; border-radius: 8px; }
+  .name { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 8px; }
+  .tok { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:#5DCAA5"></div><div class="name">Success</div><div class="tok">--success · #5DCAA5</div></div>
+    <div class="sw"><div class="chip" style="background:#F09595"></div><div class="name">Danger</div><div class="tok">--danger · #F09595</div></div>
+    <div class="sw"><div class="chip" style="background:#EF9F27"></div><div class="name">Warning</div><div class="tok">--warning · #EF9F27</div></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,4 @@
+/* Rhizolve webfonts — two-typeface split + mono.
+   Inter (all UI chrome) · Source Serif 4 (AI/agent voice) · JetBrains Mono (hashes, IDs, code).
+   Loaded from Google Fonts; only weights 400 & 500 are used system-wide. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap');

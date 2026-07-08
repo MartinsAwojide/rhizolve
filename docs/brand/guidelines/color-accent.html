@@ -1,0 +1,34 @@
+<!-- @dsCard group="Colors" viewport="700x170" name="Brand accent — blue" subtitle="Chrome only: links, active nav, primary buttons. Never coral." -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-0); font-family: var(--font-sans); padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .col h4 { margin: 0 0 8px; font-size: 11px; font-weight: 500; color: var(--text-muted); }
+  .sw { display: flex; gap: 10px; align-items: center; }
+  .chip { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border); }
+  .tok { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+  .hex { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="col"><h4>Accent (light)</h4>
+      <div class="sw"><div class="chip" style="background:#0C447C"></div><div><div class="tok">--accent</div><div class="hex">#0C447C</div></div></div>
+    </div>
+    <div class="col"><h4>Accent-fill</h4>
+      <div class="sw"><div class="chip" style="background:#185FA5"></div><div><div class="tok">--accent-fill</div><div class="hex">#185FA5</div></div></div>
+    </div>
+    <div class="col"><h4>Accent (dark)</h4>
+      <div class="sw"><div class="chip" style="background:#85B7EB"></div><div><div class="tok">--accent</div><div class="hex">#85B7EB</div></div></div>
+    </div>
+  </div>
+  <div style="margin-top:18px; display:flex; gap:12px; align-items:center;">
+    <button style="height:40px;padding:0 16px;border:none;border-radius:8px;background:#185FA5;color:#fff;font-family:var(--font-sans);font-weight:500;font-size:14px;">Primary button</button>
+    <a href="#" style="color:#0C447C;font-weight:500;font-size:14px;">A link in running text</a>
+  </div>
+</body>
+</html>

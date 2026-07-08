@@ -19,6 +19,8 @@ Before implementing any non-trivial change, ask clarifying questions Socratic-st
 
 Never add `Co-Authored-By: Claude` (or any AI co-author trailer) to commit messages. Never run `git push` unless the user explicitly asks for it in that turn — a prior push approval does not carry over.
 
+Commit messages follow `{feat|fix|chore|docs|refactor|test|style|perf|build|ci}: {message}` — type prefix, colon, space, then a concise imperative summary of the change.
+
 ## Before any architectural change
 
 Every non-trivial decision — new dependency with real footprint, data model change, cross-service contract change — gets an ADR in `docs/adr/`, numbered sequentially from the current highest (`ADR-008` is the latest as of this writing), following the existing template: Status, Context, Decision, Consequences, Alternatives Considered. Do not skip this under time pressure; retrofitting an ADR after the fact loses the "why," which is the part worth writing down.

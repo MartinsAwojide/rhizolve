@@ -1,0 +1,88 @@
+/* Rhizolve colour tokens — dual-mode, independently designed (not inverted).
+   Light: warm off-white editorial base. Dark: navy/charcoal (Search Party).
+   Every value verified WCAG AA (4.5:1 normal / 3:1 large) against its intended surface.
+
+   :root holds LIGHT mode. [data-theme="dark"] and .dark hold DARK mode.
+   Base tokens first, then semantic aliases that the components consume. */
+
+:root {
+  /* ---- Surfaces (step up toward white as elevation rises) ---- */
+  --surface-0: #FAF7F2;   /* page canvas — warm off-white */
+  --surface-1: #F3EEE6;   /* in-flow card / subtle fill */
+  --surface-2: #FFFFFF;   /* raised panel / primary card */
+
+  /* ---- Text (AA verified on surface-0) ---- */
+  --text-primary:   #1C2024;  /* ~13.8:1 */
+  --text-secondary: #44494F;  /* ~8.1:1 */
+  --text-muted:     #5E625F;  /* ~5.8:1 — clears AA normal */
+
+  /* ---- Brand accent: calm BLUE. Chrome only — never node-status. ---- */
+  --accent:      #0C447C;   /* blue-800 — links, active nav, ~7.6:1 */
+  --accent-fill: #185FA5;   /* solid primary-button background */
+  --on-accent:   #FFFFFF;   /* text on accent-fill */
+
+  /* ---- Semantic roles ---- */
+  --success: #0F6E56;  /* teal-600 */
+  --danger:  #A32D2D;  /* red-600 */
+  --warning: #854F0B;  /* amber-800 */
+
+  /* ---- Node-status vocabulary — why-tree + fault-tree ONLY.
+         Coral lives here and nowhere else in the system. ---- */
+  --node-active:     #D85A30;  /* solid coral — awaiting / mid-verification */
+  --node-confirmed:  #D85A30;  /* solid coral — Gemba NOK, real cause */
+  --node-ruled-out:  #888780;  /* hollow grey outline — Gemba OK */
+  --node-root-cause: #0F6E56;  /* green-plus — fixing prevents recurrence */
+  --node-suspended:  #378ADD;  /* dashed blue outline — soft-reset branch */
+  --node-conflict:   #BA7517;  /* split donut — field result disputes closed branch */
+
+  /* ---- Borders / lines (intentional addition — not in DESIGN.md front matter;
+         derived hairlines tuned to each surface, documented in readme). ---- */
+  --border:        #E7E0D5;   /* hairline on warm surfaces */
+  --border-strong: #D2C9BB;   /* emphasised divider / input outline */
+  --ring:          #185FA5;   /* focus ring = accent-fill */
+
+  /* ---- Elevation (soft, low-spread editorial shadows) ---- */
+  --shadow-sm: 0 1px 2px rgba(28, 32, 36, 0.06);
+  --shadow-md: 0 2px 8px rgba(28, 32, 36, 0.08);
+  --shadow-lg: 0 8px 28px rgba(28, 32, 36, 0.12);
+}
+
+[data-theme="dark"], .dark {
+  /* ---- Surfaces ---- */
+  --surface-0: #12161C;   /* deep navy-charcoal */
+  --surface-1: #1A1F27;
+  --surface-2: #222833;   /* raised slate */
+
+  /* ---- Text ---- */
+  --text-primary:   #F4F1EC;  /* ~14.2:1 */
+  --text-secondary: #BDB8B0;  /* ~7.4:1 */
+  --text-muted:     #8A857D;
+
+  /* ---- Brand accent: blue (lightened for dark surface) ---- */
+  --accent:      #85B7EB;   /* blue-200 — ~7.3:1 */
+  --accent-fill: #378ADD;
+  --on-accent:   #04121F;
+
+  /* ---- Semantic roles ---- */
+  --success: #5DCAA5;
+  --danger:  #F09595;
+  --warning: #EF9F27;
+
+  /* ---- Node-status vocabulary ---- */
+  --node-active:     #F0997B;
+  --node-confirmed:  #F0997B;
+  --node-ruled-out:  #B4B2A9;
+  --node-root-cause: #5DCAA5;
+  --node-suspended:  #85B7EB;
+  --node-conflict:   #EF9F27;
+
+  /* ---- Borders / lines ---- */
+  --border:        #2C333D;
+  --border-strong: #3A424E;
+  --ring:          #378ADD;
+
+  /* ---- Elevation (deeper, since surface is dark) ---- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.55);
+}

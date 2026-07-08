@@ -1,0 +1,25 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Spacing scale" subtitle="8px-based: xs 4 · sm 8 · md 12 · lg 16 · xl 24" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-0); font-family: var(--font-sans); padding: 24px; }
+  .row { display: flex; align-items: flex-end; gap: 22px; }
+  .item { text-align: center; }
+  .bar { background: var(--accent-fill); border-radius: 4px; width: 100%; }
+  .tok { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); margin-top: 8px; }
+  .px { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item"><div class="bar" style="height:4px;width:4px"></div><div class="tok">xs</div><div class="px">4</div></div>
+    <div class="item"><div class="bar" style="height:8px;width:8px"></div><div class="tok">sm</div><div class="px">8</div></div>
+    <div class="item"><div class="bar" style="height:12px;width:12px"></div><div class="tok">md</div><div class="px">12</div></div>
+    <div class="item"><div class="bar" style="height:16px;width:16px"></div><div class="tok">lg</div><div class="px">16</div></div>
+    <div class="item"><div class="bar" style="height:24px;width:24px"></div><div class="tok">xl</div><div class="px">24</div></div>
+  </div>
+</body>
+</html>

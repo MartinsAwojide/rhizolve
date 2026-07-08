@@ -5,23 +5,22 @@ description: >-
   platform for field operators and desk analysts. Dual-mode (light and dark are
   independently designed, not inverted), WCAG AA (4.5:1 normal text), with a
   dedicated node-status vocabulary for the why-tree and fault-tree.
-version: 0.1.0
+version: 0.2.0
 
 tokens:
   colors:
     # --- Surfaces (independently designed per mode, not inverted) ---
-    # Light mode: warm off-white editorial base. Dark mode: navy/charcoal (Search Party).
-    surface-0:            # page canvas
-      light: "#FAF7F2"    # warm off-white
-      dark:  "#12161C"    # deep navy-charcoal
-    surface-1:            # in-flow card / subtle fill
+    surface-0:            # page canvas base
+      light: "#FAF7F2"    # warm off-white editorial surface
+      dark:  "#12161C"    # deep navy-charcoal (Search Party)
+    surface-1:            # in-flow card / structural backgrounds
       light: "#F3EEE6"
       dark:  "#1A1F27"
-    surface-2:            # raised panel / primary card
+    surface-2:            # raised panel / primary overlay card
       light: "#FFFFFF"
       dark:  "#222833"
 
-    # --- Text (AA verified: 4.5:1+ normal / 3:1+ large against intended surface) ---
+    # --- Text (AA verified: 4.5:1+ normal / 3:1+ large) ---
     text-primary:
       light: "#1C2024"    # ~13.8:1 on surface-0 light
       dark:  "#F4F1EC"    # ~14.2:1 on surface-0 dark
@@ -40,24 +39,23 @@ tokens:
     accent-fill:          # solid accent button background
       light: "#185FA5"
       dark:  "#378ADD"
-    on-accent:            # text on accent-fill
+    on-accent:            # text on top of accent-fill
       light: "#FFFFFF"
       dark:  "#04121F"
 
-    # --- Semantic roles ---
+    # --- Semantic roles (system alerts, toasts, validation states) ---
     success:
-      light: "#0F6E56"    # teal-600; ~5.8:1 on light, clears AA normal
+      light: "#0F6E56"    # teal-600; ~5.8:1 on light
       dark:  "#5DCAA5"
     danger:
       light: "#A32D2D"    # red-600
       dark:  "#F09595"
     warning:
-      light: "#854F0B"    # amber-800; ~6.3:1 on light, clears AA normal
+      light: "#854F0B"    # amber-800; ~6.3:1 on light
       dark:  "#EF9F27"
 
   # --- Node-status vocabulary (why-tree + fault-tree ONLY) ---
   # These are semantic investigation states, never used for UI chrome.
-  # Coral lives here and nowhere else.
   nodeStatus:
     active:               # solid coral fill — awaiting/mid verification
       light: "#D85A30"
@@ -79,12 +77,11 @@ tokens:
       dark:  "#EF9F27"
 
   typography:
-    # Two-typeface split: sans for all UI chrome, serif for AI/agent voice.
     sans:
       fontFamily: "Inter, system-ui, sans-serif"
-    voice:                # AI TL;DR, shallow answers, agent-authored prose
+    voice:                # AI TL;DR, suggestions, agent-authored prose
       fontFamily: "'Source Serif 4', Georgia, serif"
-    mono:                 # hashes, IDs, code
+    mono:                 # hashes, investigation IDs, log timestamps
       fontFamily: "'JetBrains Mono', ui-monospace, monospace"
     scale:
       caption:
@@ -116,47 +113,66 @@ tokens:
     pill: 9999px
 ---
 
-# Rhizolve design system
+# Rhizolve Design System
 
-Rhizolve helps anyone — a field operator on a factory floor or a desk analyst — move from a problem to a verified root cause through a structured 5 Whys investigation. The interface has to work in two very different places: a bright warehouse on a phone at arm's length, and a desk on a wide monitor. That tension drives every decision below.
+Rhizolve guides personnel—from field operators standing on warehouse floors to desk analysts handling multi-incident retrospectives—from an initial operational failure down to a programmatically verified root cause using a structured 5 Whys architecture. 
 
-## Principles
+---
 
-1. **Two modes, equal weight.** Light and dark are designed independently, not derived from each other. Light mode is a warm off-white editorial surface for desk work; dark mode is a navy/charcoal surface (drawn from the Search Party investigative aesthetic) that stays legible outdoors and at night. Neither is "the real one."
-2. **AA, verified.** Every text-on-surface pairing meets WCAG AA (4.5:1 for normal text, 3:1 for large). Contrast is checked programmatically per token (see the token-parity test), not eyeballed. AA was chosen over AAA deliberately: AAA's 7:1 floor forces semantic colours (success teal, danger red, warning amber) toward muddy near-black on the warm off-white surface, weakening their signal value; AA keeps them vivid while staying accessible.
-3. **Chrome is blue. Investigation state is coral.** The brand accent — buttons, links, active nav — is a calm blue. Coral is reserved exclusively for node-status meaning in the why-tree and fault-tree. A coral element on screen always means "this is a confirmed or active cause," never "this is a button." This separation is load-bearing; do not use coral for UI chrome.
-4. **Two voices, two typefaces.** UI chrome is sans (Inter). Anything the AI authors — the TL;DR, a shallow-mode answer, agent commentary — renders in a serif voice (Source Serif 4). The typeface tells the user who is speaking before they read a word.
+## Core UX Principles
 
-## Colors
+### 1. Two Environments, Tailored Layout Hierarchies
+* **Desk View (Desktop Canvas):** Uses a multi-pane layout. Left pane maintains continuous context (incident metadata, timeline); center pane renders the expansive 2D branching graph (`@xyflow/react`); right pane displays the interactive AI Co-Pilot chat workspace.
+* **Field View (Mobile Execution):** Strips away the 2D infinite canvas entirely. Mobile operators interact via a linearized, chronological stack of actionable **Gemba Check Cards**. They review single hypotheses, snap verifying evidence photos, and input concrete system metrics.
 
-### Surfaces
+### 2. Strict Semantic Separation (The Chrome/Content Firewall)
+* **The System Chrome Layer (Exclusively Blue):** Interactivity, submission vectors, controls, layout frames, and action buttons utilize the `accent` (Blue) token set. 
+* **The Investigation State Layer (Exclusively Coral/Status-Mapped):** System states within the why-tree use the `nodeStatus` vocabulary. Coral represents a live path under scrutiny. A coral shape must never serve as a basic navigational button or action trigger.
 
-Light mode uses a warm off-white (`surface-0` `#FAF7F2`) rather than clinical white — it reads as editorial and calm, closer to Notion/Mastercard than ClickHouse. Dark mode uses a deep navy-charcoal (`#12161C`) that carries the Search Party reference and holds up under sunlight glare on a phone. Cards step up toward the lighter/darker extreme of each mode (`surface-2` is pure white in light, a raised slate in dark).
+### 3. Clear Cognitive Voice Distinctions
+* **Human/System Layouts:** Rendered in `sans` (Inter). Anything structural, functional, or user-authored uses clean, standard typography to preserve rapid information scanning.
+* **AI Agent Co-Pilot Layouts:** Rendered in `voice` (Source Serif 4). When the AI synthesizes a TL;DR summary, proposes an auxiliary branch hypothesis, or reviews a countermeasure, it is presented in an editorial serif wrapper. The user knows instantly that the text was generated, not captured.
 
-### Brand accent — blue
+---
 
-`accent` is blue and lives on chrome only: links, active navigation, the composer send affordance, primary buttons (`accent-fill` for solid backgrounds, with `on-accent` text). It is intentionally the calmest strong color in the system so that coral can carry all the semantic weight.
+## Workspace Layout Blueprints
 
-### Node-status vocabulary — the coral system
+### Desktop: Three-Pane Infinite Canvas Architecture
+* **Left Sidebar (Width: 320px, `surface-1`):** Navigation, active incident logs, structural tags, and investigator verification signatures (`mono`).
+* **Center Stage (Flexible Infinite Canvas, `surface-0`):** Graph nodes connected with orthogonal right-angle paths (`d3-hierarchy`). Active paths use solid `nodeStatus.active` vectors.
+* **Right Panel (Width: 400px, `surface-2`):** The AI Co-Pilot chat environment. Chat bubbles alternate between user inputs (sans text on subtle gray backgrounds) and agent answers (serif text inside clear white panels).
 
-This is the heart of Rhizolve's visual identity and the one part that must stay perfectly consistent across three renderers: the interactive why-tree (`@xyflow/react`), the static fault-tree in reports (server-side SVG), and the Android Gemba result buttons.
+### Mobile (Android): Linear Stream Architecture
+* No infinite-zoom scrolling. Mobile operators receive full-bleed cards representing individual nodes marked as `active` by the desk team.
+* **The Touch-Target Mandate:** Controls must sit inside clear `56dp` interaction zones to safely enable single-thumb taps by engineers wearing physical industrial gloves on active plant floors.
 
-- **active / confirmed** — solid coral fill. A hypothesis being verified, or a Gemba-NOK confirmed cause.
-- **ruled out** — hollow circle, grey outline. A Gemba-OK dead end.
-- **root cause** — green-plus marker. Fixing this prevents recurrence.
-- **suspended** — dashed blue outline. A branch parked by a soft reset.
-- **conflict** — split-color donut. A synced field result disputes an already-closed branch.
+---
 
-Node **size** encodes depth/importance; **orthogonal connectors** (right angles, via `d3-hierarchy`) reproduce the Search Party board look. These five states are the complete vocabulary — do not invent a sixth without an ADR.
+## Graph Node Vocabulary (Visual Matrices)
 
-## Typography
+This exact schema must match across the interactive React visualization layer (`@xyflow/react`), server-rendered SVGs in exportable PDFs, and mobile card indicators.
 
-Sans (`Inter`) for everything structural. Serif voice (`Source Serif 4`) for AI-authored text. Mono (`JetBrains Mono`) for hashes, investigation IDs, and signatures in the audit footer. Two weights only across the system: 400 regular, 500 medium. Sentence case everywhere, including headings and labels.
+| Node State | Border Execution | Background Fill | Meaning / Context |
+| :--- | :--- | :--- | :--- |
+| **Active** | Solid Coral | `surface-1` | Branch under review; currently being analyzed or waiting on field data. |
+| **Confirmed** | Solid Coral | Solid Coral (`#D85A30`) | Hypothesized fault is a verified reality. Gemba check failed (NOK). |
+| **Ruled Out** | Solid Grey Outline | `surface-1` (Opacity: 50%) | Hypothesis broken. Gemba check passed (OK). Dead end path. |
+| **Root Cause** | Solid Green Outline | Subtle Teal Fill | Terminal node. Remediation applied here permanently stops recurrence. |
+| **Suspended** | Dashed Blue Outline | `surface-0` | Path temporarily shelved by analyst to avoid graph clutter. |
+| **Conflict** | Alternating Split Donut | `surface-2` | Field operators report contradictory physical proof vs. desk logs. |
 
-## Space and radius
+---
 
-An 8px-based scale (`xs` 4 → `xl` 24). Controls use an 8px radius, cards 12px, pills fully rounded. Touch targets on Android are never below 48dp; the Gemba result buttons are 56dp for glove use.
+## AI Co-Pilot Design Patterns
 
-## Known tooling note
+To maintain structural authority, the AI agent cannot alter the why-tree layout autonomously.
 
-The `@google/design.md` v0.3.0 CLI `lint` validates YAML/markdown structure only — it does **not** check WCAG contrast in this release (verified empirically: malformed colour values pass lint clean). AA contrast is therefore verified programmatically in the cross-platform token-parity test (`tests/design/test_token_parity.py`), not by the linter. Re-check whether a later CLI version adds contrast linting before relying on it. The CLI `spec` and `export` subcommands are also broken in 0.3.0 (missing bundled `spec.md`; empty theme export) — track upstream before depending on token export.
+1. **Staged Suggestions:** When the AI proposes an addition to the 5 Whys chain, the recommendation renders as a dashed-outline serif card directly adjacent to the target node.
+2. **Explicit Human Validation:** A proposed AI node contains a primary blue button (`accent-fill`) labeled "Accept Suggestion" and a minor button labeled "Dismiss." The graph only transforms permanently once a human hits the blue trigger.
+
+---
+
+## Tooling & Verification Constraints
+
+* **Linting Boundary:** The `@google/design.md` v0.3.0 CLI checks document formatting and structural YAML accuracy only. It does **not** evaluate WCAG color contrast or text legibility bounds.
+* **Programmatic Testing:** Contrast validity and cross-platform variable extraction are handled via the native testing pipeline (`tests/design/test_token_parity.py`). Run the python test suite before shipping modifications to production web or mobile codebases.

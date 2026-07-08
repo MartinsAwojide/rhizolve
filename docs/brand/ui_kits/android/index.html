@@ -1,0 +1,70 @@
+<!-- @dsCard group="Android app" viewport="460x900" name="Android field client" subtitle="Chat-first + Gemba field surface, in a phone frame" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rhizolve — Android client</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  html, body { margin: 0; min-height: 100%; }
+  body { background: #2A2E35; display: flex; align-items: center; justify-content: center; gap: 40px; padding: 30px; flex-wrap: wrap; font-family: var(--font-sans); }
+  .phone { width: 380px; height: 800px; border-radius: 40px; background: #05070a; padding: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); position: relative; }
+  .screen { width: 100%; height: 100%; border-radius: 30px; overflow: hidden; background: var(--surface-0); position: relative; }
+  .notch { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 120px; height: 22px; background: #05070a; border-radius: 0 0 14px 14px; z-index: 30; }
+  .controls { position: fixed; top: 16px; left: 16px; display: flex; gap: 8px; z-index: 60; }
+  .controls button { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid #444; background: #1c1f24; color: #ddd; font-family: var(--font-sans); font-size: 12px; font-weight: 500; cursor: pointer; }
+  .cap { text-align: center; margin-top: 12px; font-family: var(--font-sans); font-size: 12px; color: #aeb4bd; }
+</style>
+</head>
+<body>
+<div class="controls">
+  <button onclick="document.querySelectorAll('.screen-html').forEach(h=>h.setAttribute('data-theme', h.getAttribute('data-theme')==='dark'?'light':'dark'))">◐ Theme</button>
+</div>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel" src="MobileScreens.jsx"></script>
+
+<script type="text/babel">
+  const { MobileChatScreen, MobileGembaScreen } = window;
+
+  function Phone({ theme, children }) {
+    return (
+      <div className="phone">
+        <div className="notch"></div>
+        <div className="screen">
+          <div className="screen-html" data-theme={theme} style={{ height: '100%' }}>{children}</div>
+        </div>
+      </div>
+    );
+  }
+
+  function App() {
+    const [screen, setScreen] = React.useState('chat');
+    return (
+      <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div>
+          <Phone theme="light">
+            {screen === 'chat'
+              ? <MobileChatScreen connectivity="cloud" onOpenGemba={() => setScreen('gemba')} />
+              : <MobileGembaScreen connectivity="cloud" onBack={() => setScreen('chat')} />}
+          </Phone>
+          <div className="cap">Light · tap the Gemba card to open the field surface</div>
+        </div>
+        <div>
+          <Phone theme="dark">
+            <MobileGembaScreen connectivity="hybrid" onBack={() => {}} />
+          </Phone>
+          <div className="cap">Dark · weak signal → hybrid routing</div>
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
