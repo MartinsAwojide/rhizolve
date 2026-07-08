@@ -16,6 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check for equipment_context
+        run: |
+          if grep -r "equipment_context" frontend/ --exclude-dir=node_modules; then
+            echo "::error::equipment_context found in frontend/ — rename to system_or_process_context"
+            exit 1
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
