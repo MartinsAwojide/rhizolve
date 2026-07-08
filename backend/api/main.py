@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis.exceptions import RedisError
 
+from api.chat import router as chat_router
 from core.config import REDIS_URL
 
 
@@ -23,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(chat_router, prefix="/api/v1")
 
 
 @app.get("/api/v1/health")
