@@ -1,0 +1,22 @@
+{
+  "enabledPlugins": {
+    "ecc@ecc": true,
+    "superpowers@superpowers-dev": true,
+    "code-review@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "caveman@caveman": true,
+
+    "frontend-design@claude-plugins-official": false,
+    "feature-dev@agentfoundry-plugin-marketplace": false,
+    "code-review@cc-marketplace": false,
+    "brainstorming-skill@jamie-bitflight-skills": false,
+    "nature-skills@nature-skills": false,
+    "claude-hud@claude-hud": true,
+    "nextlevelbuilder-ui-ux-pro-max-skill-2@cascade-content-creation-misc-1": false,
+    "claude-scholar@claude-scholar": false,
+    "open-gsd-gsd-core@cpd-open-gsd-gsd-core": false,
+    "deepeval@confident-ai-plugins": false,
+    "langchain-skills@langchain-skills": false
+  }
+}

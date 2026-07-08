@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 120" font-family="Inter, sans-serif">
+  <title>Rhizolve node-status vocabulary — light mode</title>
+  <rect width="560" height="120" fill="#FAF7F2"/>
+
+  <!-- active / confirmed: solid coral -->
+  <circle cx="56" cy="44" r="16" fill="#D85A30"/>
+  <text x="56" y="86" font-size="11" text-anchor="middle" fill="#44494F">active</text>
+
+  <!-- ruled out: hollow, grey outline, X -->
+  <circle cx="160" cy="44" r="16" fill="#FFFFFF" stroke="#888780" stroke-width="2.5"/>
+  <path d="M152,36 L168,52 M168,36 L152,52" stroke="#A32D2D" stroke-width="2.5"/>
+  <text x="160" y="86" font-size="11" text-anchor="middle" fill="#44494F">ruled out</text>
+
+  <!-- root cause: green-plus outline -->
+  <circle cx="264" cy="44" r="16" fill="#FFFFFF" stroke="#0F6E56" stroke-width="2.5"/>
+  <path d="M264,35 L264,53 M255,44 L273,44" stroke="#0F6E56" stroke-width="2.5"/>
+  <text x="264" y="86" font-size="11" text-anchor="middle" fill="#44494F">root cause</text>
+
+  <!-- suspended: dashed blue outline -->
+  <circle cx="368" cy="44" r="16" fill="#FFFFFF" stroke="#378ADD" stroke-width="2.5" stroke-dasharray="5 4"/>
+  <text x="368" y="86" font-size="11" text-anchor="middle" fill="#44494F">suspended</text>
+
+  <!-- conflict: split-colour donut -->
+  <path d="M472,28 a16,16 0 0 1 0,32 Z" fill="#BA7517"/>
+  <path d="M472,60 a16,16 0 0 1 0,-32 Z" fill="#D85A30"/>
+  <circle cx="472" cy="44" r="7" fill="#FFFFFF"/>
+  <text x="472" y="86" font-size="11" text-anchor="middle" fill="#44494F">conflict</text>
+</svg>

@@ -1,0 +1,241 @@
+# E03 — Identity & Access
+
+**Epic statement:** Every Rhizolve user needs secure authentication and role-appropriate access so that investigation data is protected and each person sees and does only what their role permits.
+
+**Sprints:** SP04–SP05  
+**Refs:** [ADR-006](../adr/ADR-006-project-collaboration.md), [Sprint Map](../build-plan/sprint-map.md)
+
+---
+
+## Done When
+
+- Users can log in via Clerk (email/password + SSO via OIDC, Google, Microsoft)
+- Organisation created automatically from Clerk org on first login
+- Six roles (Owner, Analyst, Contributor, Operator, Manager, Viewer) enforced on every project-scoped endpoint
+- Internal invitation from org member list; external invitation to any email (DocuSign model)
+- External invitees limited to Contributor, Operator, Viewer roles
+- `MembershipScope` (internal/external) computed per-request and enforced independently of role on every context-bearing endpoint — not merely designed in ADR-006, but implemented and tested (see US-19a)
+
+---
+
+## Spike
+
+**SP-03 — Clerk SDK FastAPI integration**  
+Time-box: 0.5 day. Question: Does `clerk-backend-api` Python SDK verify session tokens cleanly in FastAPI `Depends`, or is raw JWT verification via `python-jose` more reliable? Output: Library and approach selected. Done when: `get_current_user` dependency returns a `User` object from a valid Clerk token.
+
+---
+
+## US-15 — User can sign up and log in via Clerk
+
+**As a** new or returning user, **I want** to create an account and log in using Clerk, **so that** my identity is verified without a separate Rhizolve password.
+
+**Acceptance criteria:**
+- First login creates a Rhizolve `User` record linked to `clerk_user_id`
+- Returning user restores session and sees their projects
+- SSO login (Google, Microsoft, OIDC) works without additional configuration per user
+- Invalid session redirects to Clerk login page
+
+**Tasks:**
+- T01: `uv add clerk-backend-api` in `backend/`; `pnpm add @clerk/clerk-react` in `frontend/web/`
+- T02: Write `backend/core/auth.py` with `get_current_user(credentials) -> User` dependency
+- T03: Write `backend/models/user.py` with `clerk_user_id`, `email`, `display_name`, `org_id`
+- T04: Write `POST /api/v1/auth/sync` — creates/updates user record from Clerk identity on first login
+- T05: Add Clerk `<SignIn/>` and `<SignUp/>` to React routing
+- T06: Wrap protected routes with Clerk `<SignedIn>` guard
+
+**Tests:**
+```python
+@pytest.mark.asyncio
+async def test_valid_clerk_token_returns_user(async_client, mock_clerk, valid_token):
+    mock_clerk.verify_token.return_value = {"sub": "clerk_001", "email": "user@acme.com"}
+    r = await async_client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {valid_token}"})
+    assert r.status_code == 200
+
+@pytest.mark.asyncio
+async def test_first_login_creates_user_record(async_client, mock_clerk, db):
+    mock_clerk.verify_token.return_value = {"sub": "new_clerk_id", "email": "new@acme.com"}
+    await async_client.post("/api/v1/auth/sync")
+    user = await db.get_user_by_clerk_id("new_clerk_id")
+    assert user is not None
+```
+
+---
+
+## US-16 — Organisation created and populated via Clerk
+
+**As an** organisation administrator, **I want** my org created automatically when the first member logs in, **so that** all subsequent members are recognised as colleagues without manual setup.
+
+**Acceptance criteria:**
+- First user from a Clerk org creates the Rhizolve org record
+- Subsequent users from the same Clerk org link to the existing org
+- Multi-org users can switch between orgs in the nav bar
+- All Clerk org members visible as potential collaborators when inviting
+
+**Tasks:**
+- T01: Write `backend/models/organisation.py` with `clerk_org_id`, `name`, `maturity_level` (default 2)
+- T02: Update `POST /api/v1/auth/sync` to create/link org on login
+- T03: Write `GET /api/v1/organisations/members` returning Clerk org members for invitation lookup
+- T04: Write org switcher component in React nav bar
+
+**Tests:**
+```python
+@pytest.mark.asyncio
+async def test_second_login_does_not_duplicate_org(async_client, mock_clerk, db, existing_org):
+    mock_clerk.verify_token.return_value = {"sub": "user_002", "org_id": existing_org.clerk_org_id}
+    await async_client.post("/api/v1/auth/sync")
+    assert await db.count_orgs() == 1
+```
+
+---
+
+## US-17 — Owner invites internal members by role
+
+**As a** project Owner, **I want** to invite colleagues from my org and assign them a role, **so that** the right people participate with appropriate access.
+
+**Acceptance criteria:**
+- Org member list from Clerk shown as searchable dropdown
+- Invited member receives in-app notification and email
+- Accepted invite creates active `ProjectMember` with assigned role
+- Duplicate invite returns 409
+
+**Tasks:**
+- T01: Write `POST /api/v1/projects/{id}/members/internal` accepting `clerk_user_id` and `role`
+- T02: Write `backend/models/project_member.py` with `project_id`, `user_id`, `role`, `status`
+- T03: Send invitation email via Clerk or Resend on invite
+- T04: Write `POST /api/v1/projects/{id}/members/accept`
+
+**Tests:**
+```python
+@pytest.mark.asyncio
+async def test_duplicate_invite_returns_409(authed_owner, project_id, existing_member):
+    r = await authed_owner.post(f"/api/v1/projects/{project_id}/members/internal",
+                                json={"clerk_user_id": existing_member.clerk_user_id, "role": "analyst"})
+    assert r.status_code == 409
+```
+
+---
+
+## US-18 — Owner invites external collaborators by email (DocuSign model)
+
+**As a** project Owner, **I want** to invite anyone by email regardless of whether they have a Rhizolve account, **so that** external clients, auditors, and specialists can participate.
+
+**Acceptance criteria:**
+- Any valid email can receive an invitation
+- Recipient without Clerk account goes through sign-up first
+- Invitation expires after 7 days; Owner can resend
+- External invitees limited to Contributor, Operator, Viewer — Owner/Analyst require org membership
+
+**Tasks:**
+- T01: Write `POST /api/v1/projects/{id}/members/external` accepting `email` and `role`
+- T02: Validate role ∈ {contributor, operator, viewer} for external invitees — return 422 otherwise
+- T03: Generate signed invitation token with 7-day expiry
+- T04: Send invitation email via Resend with Clerk auth link embedded
+- T05: Write `GET /api/v1/invites/{token}` and `POST /api/v1/invites/{token}/resend`
+
+**Tests:**
+```python
+@pytest.mark.asyncio
+async def test_external_cannot_be_owner(authed_owner, project_id):
+    r = await authed_owner.post(f"/api/v1/projects/{project_id}/members/external",
+                                json={"email": "ext@client.com", "role": "owner"})
+    assert r.status_code == 422
+
+@pytest.mark.asyncio
+async def test_expired_token_returns_410(async_client, expired_token):
+    r = await async_client.get(f"/api/v1/invites/{expired_token}")
+    assert r.status_code == 410
+```
+
+---
+
+## US-19 — Role-based access enforced on every project action
+
+**As a** developer, **I want** every project-scoped endpoint to check the requesting user's role, **so that** no user performs actions beyond their role.
+
+**Acceptance criteria:**
+- Operator starting an investigation returns 403
+- Viewer submitting a Gemba result returns 403
+- Contributor overriding the validator returns 403
+- Non-member accessing any project endpoint returns 403
+- Valid role for the action proceeds normally
+
+**Tasks:**
+- T01: Write `backend/api/middleware/rbac.py` with `require_project_role(minimum_role)` dependency
+- T02: Define role hierarchy: Owner > Analyst > Contributor > Operator > Manager > Viewer
+- T03: Apply `require_project_role` to every project-scoped route
+- T04: Write comprehensive `test_rbac.py` covering every role-action combination in the permission matrix
+
+**Tests:**
+```python
+@pytest.mark.asyncio
+async def test_operator_cannot_start_investigation(authed_operator, project_id):
+    r = await authed_operator.post(f"/api/v1/projects/{project_id}/investigations", json={...})
+    assert r.status_code == 403
+
+@pytest.mark.asyncio
+async def test_viewer_cannot_submit_gemba(authed_viewer, project_id, inv_id):
+    r = await authed_viewer.post(f"/api/v1/projects/{project_id}/investigations/{inv_id}/gemba",
+                                  json={"result": "OK", "notes": ""})
+    assert r.status_code == 403
+```
+
+---
+
+## US-19a — Membership scope enforced independently of role on every context-bearing endpoint
+
+**As a** developer, **I want** `require_internal_scope()` implemented and applied wherever context, RAG, integration data, or audit data is served, **so that** external members are correctly capped regardless of the role label they were given — this is the actual implementation that ADR-006's `MembershipScope` model depends on; without this story it is architecture with no code behind it.
+
+**Acceptance criteria:**
+- `member.scope` is computed at request time from `member.user.org_id != member.project.org_id` — never stored, never cached on `ProjectMember`
+- `require_internal_scope()` is a FastAPI `Depends`, not inline logic inside a handler body — so MCP tool calls (E10) inherit the same check automatically by construction
+- An `EXTERNAL`-scoped Contributor calling the context injection endpoint receives 403, despite the role-only permission matrix showing ✓ for Contributor
+- An `EXTERNAL`-scoped Viewer calling report export receives 403, despite the role-only permission matrix showing ✓ for Viewer
+- The why-tree response serialiser strips `domain_context`, RAG matches, and external integration fields for `EXTERNAL` scope while still returning hypotheses and tree structure — this is redaction on a shared endpoint, not a second blocked endpoint
+- A user's scope on the same project can differ between two requests if their org affiliation changes between them — proving the "never cached" requirement is real, not just stated
+
+**Tasks:**
+- T01: Add `org_id` foreign keys to both `User` and `Project` if not already present from E04's project model; write `member.scope` as a computed property, not a column
+- T02: Write `backend/api/middleware/scope.py` with `require_internal_scope(member: ProjectMember = Depends(get_project_member))` per ADR-006
+- T03: Apply `require_internal_scope` to: context injection (E02 US-13), RAG search (E09 US-62), external integration context (E11), audit log (E08 US-58), report export (E08 US-59)
+- T04: Write `serialize_why_tree(nodes, scope)` per ADR-006 and use it as the single serialiser for every route that returns tree data — REST and MCP alike — rather than writing scope-aware logic twice
+- T05: Write `test_scope.py` covering every `EXTERNAL_DENIED_ACTIONS` entry from ADR-006 with both a 403 case (blocked endpoint) and a redaction case (shared endpoint, stripped fields)
+
+**Tests:**
+```python
+@pytest.mark.asyncio
+async def test_external_contributor_cannot_inject_context(authed_external_contributor, project_id, inv_id):
+    r = await authed_external_contributor.post(
+        f"/api/v1/projects/{project_id}/investigations/{inv_id}/context",
+        json={"context": "Should be blocked"})
+    assert r.status_code == 403
+
+@pytest.mark.asyncio
+async def test_external_viewer_cannot_export_report(authed_external_viewer, project_id, inv_id):
+    r = await authed_external_viewer.get(
+        f"/api/v1/projects/{project_id}/investigations/{inv_id}/report?format=pdf")
+    assert r.status_code == 403
+
+@pytest.mark.asyncio
+async def test_external_scope_gets_redacted_tree_not_blocked_tree(authed_external_contributor,
+                                                                   project_id, inv_id):
+    """Contrast with the two tests above: tree access is a redaction case,
+    not a 403 case — external members can see structure, just not domain_context."""
+    r = await authed_external_contributor.get(
+        f"/api/v1/projects/{project_id}/investigations/{inv_id}/tree")
+    assert r.status_code == 200
+    assert "domain_context" not in r.json()
+    assert "hypothesis" in r.json()["nodes"][0]
+
+@pytest.mark.asyncio
+async def test_scope_recomputed_not_cached_across_requests(authed_client, project_id, inv_id,
+                                                             user_that_changes_org):
+    """If the user's org affiliation changes mid-session, the very next request
+    must reflect the new scope — proving scope is never persisted on ProjectMember."""
+    r1 = await authed_client.get(f"/api/v1/projects/{project_id}/investigations/{inv_id}/tree")
+    assert "domain_context" in r1.json()  # still internal at this point
+
+    await simulate_org_change(user_that_changes_org, new_org_id="different-org")
+
+    r2 = await authed_client.get(f"/api/v1/projects/{project_id}/investigations/{inv_id}/tree")
+    assert "domain_context" not in r2.json()  # now external, no caching masked the change
+```
