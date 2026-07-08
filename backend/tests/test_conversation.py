@@ -13,9 +13,9 @@ async def test_shallow_does_not_invoke_graph():
 
     result = await agent.handle("What is 5 Whys?", mode="shallow")
 
-    assert result["graph_invoked"] is False
-    assert isinstance(result["response"], str)
-    assert len(result["response"]) > 0
+    assert result.graph_invoked is False
+    assert isinstance(result.response, str)
+    assert len(result.response) > 0
     mock_graph.ainvoke.assert_not_called()
 
 
@@ -26,5 +26,5 @@ async def test_deep_invokes_graph():
 
     result = await agent.handle("Trucks keep hitting the loading-bay walls", mode="deep")
 
-    assert result["graph_invoked"] is True
+    assert result.graph_invoked is True
     mock_graph.ainvoke.assert_called_once()
