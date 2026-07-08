@@ -11,7 +11,7 @@ on:
       - ".github/workflows/ci-backend.yml"
 
 jobs:
-  test:
+  backend:
     runs-on: ubuntu-latest
     services:
       redis:
