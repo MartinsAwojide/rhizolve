@@ -29,6 +29,8 @@ Every non-trivial decision — new dependency with real footprint, data model ch
 
 Write the failing test before the implementation for every story in `docs/agile/`. No new logic merges without a test covering it.
 
+Build and validate every feature end-to-end against real infrastructure, not just imports/type-checks — even when the task breakdown (`T01`, `T02`, ...) doesn't list a test line item for it. Add a bash script under the relevant `tests/` (or `tests/scripts/`) folder to stand up whatever's needed (a container, a service) and tear it down, then actually run it — e.g. `backend/tests/scripts/redis_test_up.sh` / `redis_test_down.sh` spinning up real `redis:8-alpine` to validate `make_checkpointer()` rather than trusting a bare import check.
+
 ## Work is spec'd as Hills → Epics → User Stories → Tasks → Tests
 
 See `docs/product-brief.md` (the Hill), `docs/build-plan/sprint-map.md` (sequencing), `docs/agile/e*.md` (the 12 epics). Before implementing anything, find the relevant `US-xx` story — its acceptance criteria and pre-written tests are the spec. Don't invent scope beyond what the story states without asking.
@@ -40,6 +42,8 @@ Follows `DESIGN.md` at repo root (Google Stitch spec — YAML front matter + pro
 ## Debugging sparse-docs dependencies
 
 Koog, Cactus, FastMCP 3.0, and `langgraph-checkpoint-redis` all move faster than their official docs. Check GitHub Issues on the relevant repo before proposing a fix from memory or training data — for these specific packages, an open issue or recent PR is more likely to be correct than what a model already "knows."
+
+More generally: whenever a framework/library behaves unexpectedly (error, wrong output, API mismatch with training data), research the corresponding GitHub repo's Issues (and closed PRs) for fixes, workarounds, or confirmation before guessing from memory — not just for the sparse-docs packages named above. Read-only research only: never open, comment on, or otherwise create issues/PRs on a third-party repo — that requires explicit approval, which will not be granted proactively.
 
 ## Permissions
 
