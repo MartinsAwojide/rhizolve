@@ -290,6 +290,123 @@ async def test_inject_context_appends_domain_context_with_timestamp(agent):
 
 
 @pytest.mark.asyncio
+async def test_submit_hypothesis_review_regenerates_with_context():
+    async def _context_sensitive_why_generator(state):
+        domain_context = state.get("domain_context")
+        hypothesis = (
+            f"upstream regulator fault ({domain_context})"
+            if domain_context
+            else "seal wear on the fill valve"
+        )
+        return {
+            "pending_hypotheses": [
+                {
+                    "hypothesis": hypothesis,
+                    "branch_path": f"{state['current_branch_path']}.h1",
+                    "depth": state["current_depth"],
+                    "gemba_instructions": "inspect",
+                }
+            ]
+        }
+
+    checkpointer, ctx = await make_checkpointer()
+    try:
+        with_patch = pytest.MonkeyPatch()
+        with_patch.setattr(
+            "agent.graph.why_generator", _context_sensitive_why_generator
+        )
+        try:
+            regen_agent = FiveWhysAgent(checkpointer)
+            started = await regen_agent.start_investigation(
+                phenomenon="Glue overflowed",
+                domain="manufacturing",
+                system_or_process_context="glue tank fill station, line 3",
+            )
+            investigation_id = started["investigation_id"]
+            assert started["interrupt_type"] == "hypothesis_review"
+
+            config = regen_agent._config(investigation_id)
+            before = await regen_agent.graph.aget_state(config)
+            depth_before = before.values["current_depth"]
+            branch_before = before.values["current_branch_path"]
+
+            result = await regen_agent.submit_hypothesis_review(
+                investigation_id,
+                regenerate_with_context="check the upstream regulator too",
+            )
+            assert result["interrupt_type"] == "hypothesis_review"
+
+            snapshot = await regen_agent.graph.aget_state(config)
+            assert snapshot.values["pending_hypotheses"][0]["hypothesis"] == (
+                "upstream regulator fault (check the upstream regulator too)"
+            )
+            assert snapshot.values["current_depth"] == depth_before
+            assert snapshot.values["current_branch_path"] == branch_before
+
+            await regen_agent.submit_gemba(
+                investigation_id, result="NOK", notes="confirmed"
+            )
+            snapshot = await regen_agent.graph.aget_state(config)
+            node = next(
+                n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
+            )
+            assert "upstream regulator fault" in node["hypothesis"]
+            assert "check the upstream regulator too" in node["hypothesis"]
+        finally:
+            with_patch.undo()
+    finally:
+        await ctx.__aexit__(None, None, None)
+
+
+@pytest.mark.asyncio
+async def test_submit_hypothesis_review_edits_pending_list(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+
+    edited = [
+        {
+            "hypothesis": "operator error during fill",
+            "branch_path": "root.h1",
+            "depth": 1,
+            "gemba_instructions": "review operator log",
+        }
+    ]
+    result = await agent.submit_hypothesis_review(investigation_id, hypotheses=edited)
+    assert result["interrupt_type"] == "gemba_result_review"
+
+    gemba_result = await agent.submit_gemba(
+        investigation_id, result="NOK", notes="confirmed"
+    )
+    config = agent._config(investigation_id)
+    snapshot = await agent.graph.aget_state(config)
+    node = next(
+        n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
+    )
+    assert node["hypothesis"] == "operator error during fill"
+    assert gemba_result["investigation_id"] == investigation_id
+
+
+@pytest.mark.asyncio
+async def test_submit_hypothesis_review_confirm_without_edits_advances_normally(
+    agent,
+):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+    assert started["interrupt_type"] == "hypothesis_review"
+
+    result = await agent.submit_hypothesis_review(investigation_id)
+    assert result["interrupt_type"] != "hypothesis_review"
+
+
+@pytest.mark.asyncio
 async def test_start_investigation_tracks_project_id_for_later_calls(agent):
     started = await agent.start_investigation(
         phenomenon="Glue overflowed",

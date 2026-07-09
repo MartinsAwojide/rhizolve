@@ -215,12 +215,13 @@ async def test_max_depth_routes_to_countermeasure(agent):
 - User override of validator routes to countermeasure regardless of AI decision
 
 **Tasks:**
-- T01: Add `interrupt_before=["gemba_dispatcher"]`, `interrupt_after=["root_cause_validator", "countermeasure_generator"]`
-- T02: Add `user_override_root_cause: Optional[bool]`, `user_probe_direction: Optional[str]` to `OverallState`
-- T03: Add `countermeasure_edit: Optional[str]`, `countermeasure_feedback: Optional[str]` to `OverallState`
-- T04: Update `_validate_router` to check `user_override_root_cause` before AI decision
-- T05: Update `countermeasure_generator` to include `countermeasure_feedback` in prompt when set
-- T06: Update `report_generator` to use `countermeasure_edit` if set
+- T01: Add `interrupt_before=["gemba_dispatcher"]`, `interrupt_after=["root_cause_validator", "countermeasure_generator"]` — DONE (US-11 T04b/T04c).
+- T02: ~~Add `user_override_root_cause`, `user_probe_direction` to `OverallState`~~ — not needed. `submit_validator_review` (US-11 T04c) writes `is_root_cause` directly onto the `WhyNode` via `aupdate_state(as_node="root_cause_validator")` and reuses the existing `domain_context` field for probe direction. Verified via grep against `docs/adr/*.md`: ADR-007's ratified `OverallState`/`WhyNode` schema does not include these fields, and adding them would diverge from the LangGraph↔Koog canonical schema for no behavioral gain.
+- T03: ~~Add `countermeasure_edit`, `countermeasure_feedback` to `OverallState`~~ — not needed, same reasoning: `submit_countermeasure_review` (US-11 T04c) writes `countermeasure` directly onto the `WhyNode` and reuses `domain_context` for feedback text.
+- T04: ~~Update `_validate_router` to check `user_override_root_cause`~~ — not needed. `_validate_router`'s existing (unmodified) check of `why_node["is_root_cause"]` already picks up the direct write with zero router changes.
+- T05: Update `countermeasure_generator` to include feedback in prompt when set — DONE (US-11 T04c, reads `domain_context`).
+- T06: ~~Update `report_generator` to use `countermeasure_edit`~~ — not needed. `report_generator` already reads `why_node["countermeasure"]`, which `submit_countermeasure_review`'s edit path overwrites directly.
+- New: `submit_hypothesis_review(investigation_id, hypotheses=None, regenerate_with_context=None)` on `FiveWhysAgent` (`backend/agent/five_whys_agent.py`) — the one genuinely new capability. Edits the `pending_hypotheses` list in place before dispatch, or rewinds to `intake` (the fixed edge into `why_generator`) with added `domain_context` to regenerate the batch without resetting investigation progress. DONE — tests in `backend/tests/test_five_whys_agent.py`.
 
 **Tests:**
 ```python

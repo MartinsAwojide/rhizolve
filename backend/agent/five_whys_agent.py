@@ -139,6 +139,35 @@ class FiveWhysAgent:
         await self.graph.ainvoke(None, config)
         return await self._status(investigation_id)
 
+    async def submit_hypothesis_review(
+        self,
+        investigation_id: str,
+        hypotheses: list[dict[str, Any]] | None = None,
+        regenerate_with_context: str | None = None,
+    ) -> dict[str, Any]:
+        config = self._config(investigation_id)
+        snapshot = await self.graph.aget_state(config)
+
+        if regenerate_with_context:
+            existing = snapshot.values.get("domain_context", "")
+            await self.graph.aupdate_state(
+                config,
+                {
+                    "domain_context": (
+                        f"{existing}\n{regenerate_with_context}".strip()
+                    ),
+                    "pending_hypotheses": [],
+                },
+                as_node="intake",
+            )
+        elif hypotheses is not None:
+            await self.graph.aupdate_state(
+                config, {"pending_hypotheses": hypotheses}, as_node="why_generator"
+            )
+
+        await self.graph.ainvoke(None, config)
+        return await self._status(investigation_id)
+
     async def inject_context(self, thread_id: str, context: str) -> None:
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
         snapshot = await self.graph.aget_state(config)
