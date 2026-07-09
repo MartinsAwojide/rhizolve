@@ -1,6 +1,23 @@
-from typing import Annotated, Any, Literal, NotRequired, TypedDict
+import json
+from typing import Annotated, Any, Literal, NotRequired, TypedDict, cast
 
 from langgraph.graph import StateGraph
+from openai import APIConnectionError, InternalServerError, RateLimitError
+from openai.types.chat import (
+    ChatCompletionFunctionToolParam,
+    ChatCompletionMessageFunctionToolCall,
+    ChatCompletionMessageParam,
+)
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from agent.tools import TOOL_FUNCTIONS, TOOL_SCHEMAS
+from core.config import OPENROUTER_MODEL
+from core.llm import get_llm_client
 
 
 class WhyNode(TypedDict):
@@ -53,15 +70,135 @@ class OverallState(TypedDict):
 
 async def intake(state: OverallState) -> dict[str, Any]:
     return {
-        "current_depth": 0,
+        "current_depth": 1,
         "current_branch_path": "root",
         "why_nodes": [],
         "pending_hypotheses": [],
     }
 
 
+_WHY_GENERATOR_SYSTEM_PROMPT = (
+    "You are conducting a 5 Whys root cause investigation. Given the "
+    "phenomenon and context below, propose plausible hypotheses for why it "
+    "is happening at the current branch. You may call the provided search "
+    "and lookup tools to ground your hypotheses in real failure modes, "
+    "recent incidents, or engineering references before answering. When "
+    "you are ready to answer, respond with ONLY a JSON array, no other "
+    'text, of objects matching this shape: [{"hypothesis": string, '
+    '"gemba_instructions": string}]. "gemba_instructions" is a concrete '
+    "instruction for what to physically check/observe (Gemba walk) to "
+    "verify or refute the hypothesis."
+)
+
+
+def _why_generator_user_prompt(state: OverallState) -> str:
+    lines = [
+        f"Phenomenon: {state['phenomenon']}",
+        f"Domain: {state['domain']}",
+        f"System/process context: {state['system_or_process_context']}",
+        f"Current branch: {state['current_branch_path']}",
+    ]
+    active = state.get("active_hypothesis")
+    if active is not None:
+        lines.append(f"Drilling deeper into hypothesis: {active['hypothesis']}")
+    domain_context = state.get("domain_context")
+    if domain_context:
+        lines.append(f"Additional context: {domain_context}")
+    return "\n".join(lines)
+
+
+@retry(
+    retry=retry_if_exception_type(
+        (APIConnectionError, RateLimitError, InternalServerError)
+    ),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    stop=stop_after_attempt(3),
+)
 async def why_generator(state: OverallState) -> dict[str, Any]:
-    return {}
+    llm_client = get_llm_client()
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": _WHY_GENERATOR_SYSTEM_PROMPT},
+        {"role": "user", "content": _why_generator_user_prompt(state)},
+    ]
+
+    completion = await llm_client.chat.completions.create(
+        model=OPENROUTER_MODEL,
+        messages=cast(list[ChatCompletionMessageParam], messages),
+        tools=cast(list[ChatCompletionFunctionToolParam], TOOL_SCHEMAS),
+    )
+    message = completion.choices[0].message
+
+    while message.tool_calls:
+        tool_calls = cast(
+            list[ChatCompletionMessageFunctionToolCall], message.tool_calls
+        )
+        messages.append(
+            {
+                "role": "assistant",
+                "content": message.content,
+                "tool_calls": [
+                    {
+                        "id": call.id,
+                        "type": "function",
+                        "function": {
+                            "name": call.function.name,
+                            "arguments": call.function.arguments,
+                        },
+                    }
+                    for call in tool_calls
+                ],
+            }
+        )
+        for call in tool_calls:
+            tool_fn = TOOL_FUNCTIONS[call.function.name]
+            args = json.loads(call.function.arguments or "{}")
+            result = await tool_fn(**args)
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": json.dumps(result),
+                }
+            )
+        completion = await llm_client.chat.completions.create(
+            model=OPENROUTER_MODEL,
+            messages=cast(list[ChatCompletionMessageParam], messages),
+            tools=cast(list[ChatCompletionFunctionToolParam], TOOL_SCHEMAS),
+        )
+        message = completion.choices[0].message
+
+    messages.append({"role": "assistant", "content": message.content})
+    messages.append(
+        {
+            "role": "user",
+            "content": (
+                "Respond with ONLY the JSON array now, no other text, no "
+                "markdown fences, matching the shape given earlier."
+            ),
+        }
+    )
+    final_completion = await llm_client.chat.completions.create(
+        model=OPENROUTER_MODEL,
+        messages=cast(list[ChatCompletionMessageParam], messages),
+    )
+    content = (final_completion.choices[0].message.content or "[]").strip()
+    content = (
+        content.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    )
+    hypotheses = json.loads(content)
+
+    branch_prefix = state["current_branch_path"]
+    pending_hypotheses: list[PendingHypothesis] = [
+        {
+            "hypothesis": item["hypothesis"],
+            "branch_path": f"{branch_prefix}.h{i + 1}",
+            "depth": state["current_depth"],
+            "gemba_instructions": item["gemba_instructions"],
+        }
+        for i, item in enumerate(hypotheses)
+    ]
+
+    return {"pending_hypotheses": pending_hypotheses}
 
 
 async def gemba_dispatcher(state: OverallState) -> dict[str, Any]:
