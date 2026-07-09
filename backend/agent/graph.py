@@ -328,6 +328,11 @@ async def countermeasure_generator(state: OverallState) -> dict[str, Any]:
                     "content": (
                         f"Phenomenon: {state['phenomenon']}\n"
                         f"Hypothesis: {why_node['hypothesis']}"
+                        + (
+                            f"\nAdditional context: {state['domain_context']}"
+                            if state.get("domain_context")
+                            else ""
+                        )
                     ),
                 },
             ],

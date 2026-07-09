@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from langchain_core.runnables import RunnableConfig
@@ -9,7 +10,21 @@ from agent.graph import build_graph
 _INTERRUPT_TYPES = {
     "gemba_dispatcher": "hypothesis_review",
     "gemba_check": "gemba_result_review",
+    "why_generator": "validator_review",
+    "countermeasure_generator": "validator_review",
+    "report_generator": "countermeasure_review",
 }
+
+
+def _find_active_node(snapshot: Any) -> Any:
+    active = snapshot.values.get("active_hypothesis")
+    if active is None:
+        return None
+    return next(
+        n
+        for n in snapshot.values["why_nodes"]
+        if n["branch_path"] == active["branch_path"]
+    )
 
 
 class FiveWhysAgent:
@@ -17,6 +32,7 @@ class FiveWhysAgent:
         self.graph = build_graph().compile(
             checkpointer=checkpointer,
             interrupt_before=["gemba_dispatcher", "gemba_check"],
+            interrupt_after=["root_cause_validator", "countermeasure_generator"],
         )
         self._project_ids: dict[str, str] = {}
 
@@ -61,20 +77,77 @@ class FiveWhysAgent:
             await self.graph.ainvoke(None, config)
             snapshot = await self.graph.aget_state(config)
 
-        active = snapshot.values.get("active_hypothesis")
-        if active is None:
+        node = _find_active_node(snapshot)
+        if node is None:
             return await self._status(investigation_id)
-        node = next(
-            n
-            for n in snapshot.values["why_nodes"]
-            if n["branch_path"] == active["branch_path"]
-        )
         updated_node = {**node, "gemba_result": result, "gemba_notes": notes}
         await self.graph.aupdate_state(
             config, {"why_nodes": [updated_node]}, as_node="gemba_check"
         )
         await self.graph.ainvoke(None, config)
         return await self._status(investigation_id)
+
+    async def submit_validator_review(
+        self,
+        investigation_id: str,
+        user_override_root_cause: bool,
+        user_probe_direction: str | None = None,
+    ) -> dict[str, Any]:
+        config = self._config(investigation_id)
+        snapshot = await self.graph.aget_state(config)
+        node = _find_active_node(snapshot)
+
+        update: dict[str, Any] = {}
+        if node is not None and user_override_root_cause:
+            update["why_nodes"] = [{**node, "is_root_cause": True}]
+        if user_probe_direction:
+            existing = snapshot.values.get("domain_context", "")
+            update["domain_context"] = f"{existing}\n{user_probe_direction}".strip()
+        if update:
+            await self.graph.aupdate_state(
+                config, update, as_node="root_cause_validator"
+            )
+
+        await self.graph.ainvoke(None, config)
+        return await self._status(investigation_id)
+
+    async def submit_countermeasure_review(
+        self,
+        investigation_id: str,
+        accepted: bool,
+        edit: str | None = None,
+        feedback: str | None = None,
+    ) -> dict[str, Any]:
+        config = self._config(investigation_id)
+        snapshot = await self.graph.aget_state(config)
+        node = _find_active_node(snapshot)
+
+        if accepted:
+            if edit and node is not None:
+                await self.graph.aupdate_state(
+                    config,
+                    {"why_nodes": [{**node, "countermeasure": edit}]},
+                    as_node="countermeasure_generator",
+                )
+        elif feedback:
+            existing = snapshot.values.get("domain_context", "")
+            appended = f"{existing}\nCountermeasure feedback: {feedback}".strip()
+            await self.graph.aupdate_state(
+                config, {"domain_context": appended}, as_node="root_cause_validator"
+            )
+
+        await self.graph.ainvoke(None, config)
+        return await self._status(investigation_id)
+
+    async def inject_context(self, thread_id: str, context: str) -> None:
+        config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+        snapshot = await self.graph.aget_state(config)
+        existing = snapshot.values.get("domain_context", "")
+        timestamp = datetime.now(timezone.utc).isoformat()
+        appended = f"{existing}\n[{timestamp}] User: {context}".strip()
+        await self.graph.aupdate_state(
+            config, {"domain_context": appended}, as_node="intake"
+        )
 
     async def _status(self, investigation_id: str) -> dict[str, Any]:
         config = self._config(investigation_id)
