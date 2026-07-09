@@ -61,7 +61,9 @@ class FiveWhysAgent:
             await self.graph.ainvoke(None, config)
             snapshot = await self.graph.aget_state(config)
 
-        active = snapshot.values["active_hypothesis"]
+        active = snapshot.values.get("active_hypothesis")
+        if active is None:
+            return await self._status(investigation_id)
         node = next(
             n
             for n in snapshot.values["why_nodes"]

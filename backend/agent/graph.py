@@ -256,8 +256,9 @@ _ROOT_CAUSE_VALIDATOR_SYSTEM_PROMPT = (
     stop=stop_after_attempt(3),
 )
 async def root_cause_validator(state: OverallState) -> dict[str, Any]:
-    active = state["active_hypothesis"]
-    assert active is not None
+    active = state.get("active_hypothesis")
+    if active is None:
+        return {}
     why_node = _find_why_node(state, active["branch_path"])
     assert why_node is not None
 
@@ -308,8 +309,9 @@ _COUNTERMEASURE_SYSTEM_PROMPT = (
     stop=stop_after_attempt(3),
 )
 async def countermeasure_generator(state: OverallState) -> dict[str, Any]:
-    active = state["active_hypothesis"]
-    assert active is not None
+    active = state.get("active_hypothesis")
+    if active is None:
+        return {}
     why_node = _find_why_node(state, active["branch_path"])
     assert why_node is not None
 

@@ -504,6 +504,20 @@ async def test_countermeasure_generator_writes_countermeasure_to_active_node(
 
 
 @pytest.mark.asyncio
+async def test_root_cause_validator_noop_when_no_active_hypothesis():
+    state = _base_state()
+    result = await root_cause_validator(state)
+    assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_countermeasure_generator_noop_when_no_active_hypothesis():
+    state = _base_state()
+    result = await countermeasure_generator(state)
+    assert result == {}
+
+
+@pytest.mark.asyncio
 async def test_graph_merges_why_nodes_across_state_updates():
     checkpointer, ctx = await make_checkpointer()
     try:
