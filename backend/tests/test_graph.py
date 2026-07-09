@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from agent.graph import (
@@ -7,7 +9,9 @@ from agent.graph import (
     _validate_router,
     _why_router,
     build_graph,
+    countermeasure_generator,
     gemba_dispatcher,
+    root_cause_validator,
 )
 from core.memory import make_checkpointer
 
@@ -389,6 +393,114 @@ async def test_gemba_dispatcher_removes_dispatched_hypothesis_from_queue():
             "gemba_instructions": "inspect pump",
         }
     ]
+
+
+def _mock_llm_client(content: str) -> AsyncMock:
+    mock_llm_client = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content=content))]
+    mock_llm_client.chat.completions.create = AsyncMock(return_value=mock_response)
+    return mock_llm_client
+
+
+@pytest.mark.asyncio
+async def test_root_cause_validator_marks_root_cause(monkeypatch):
+    mock_llm_client = _mock_llm_client('{"is_root_cause": true, "reasoning": "..."}')
+    monkeypatch.setattr("agent.graph.get_llm_client", lambda: mock_llm_client)
+
+    state = _base_state(
+        current_depth=3,
+        max_depth=5,
+        current_branch_path="root.h1",
+        active_hypothesis={
+            "hypothesis": "seal wear",
+            "branch_path": "root.h1",
+            "depth": 3,
+            "gemba_instructions": "inspect seal",
+        },
+        why_nodes=[
+            {
+                "id": "n1",
+                "branch_path": "root.h1",
+                "depth": 3,
+                "hypothesis": "seal wear",
+                "gemba_result": "NOK",
+                "gemba_notes": "seal cracked",
+                "is_root_cause": False,
+                "countermeasure": "",
+            }
+        ],
+    )
+    result = await root_cause_validator(state)
+    updated = result["why_nodes"][0]
+    assert updated["is_root_cause"] is True
+
+
+@pytest.mark.asyncio
+async def test_root_cause_validator_syncs_depth_and_branch_to_validated_node(
+    monkeypatch,
+):
+    mock_llm_client = _mock_llm_client('{"is_root_cause": false, "reasoning": "..."}')
+    monkeypatch.setattr("agent.graph.get_llm_client", lambda: mock_llm_client)
+
+    state = _base_state(
+        current_depth=1,
+        max_depth=5,
+        current_branch_path="root",
+        active_hypothesis={
+            "hypothesis": "seal wear",
+            "branch_path": "root.h1",
+            "depth": 3,
+            "gemba_instructions": "inspect seal",
+        },
+        why_nodes=[
+            {
+                "id": "n1",
+                "branch_path": "root.h1",
+                "depth": 3,
+                "hypothesis": "seal wear",
+                "gemba_result": "NOK",
+                "gemba_notes": "seal cracked",
+                "is_root_cause": False,
+                "countermeasure": "",
+            }
+        ],
+    )
+    result = await root_cause_validator(state)
+    assert result["current_depth"] == 3
+    assert result["current_branch_path"] == "root.h1"
+
+
+@pytest.mark.asyncio
+async def test_countermeasure_generator_writes_countermeasure_to_active_node(
+    monkeypatch,
+):
+    mock_llm_client = _mock_llm_client('{"countermeasure": "replace the seal"}')
+    monkeypatch.setattr("agent.graph.get_llm_client", lambda: mock_llm_client)
+
+    state = _base_state(
+        active_hypothesis={
+            "hypothesis": "seal wear",
+            "branch_path": "root.h1",
+            "depth": 3,
+            "gemba_instructions": "inspect seal",
+        },
+        why_nodes=[
+            {
+                "id": "n1",
+                "branch_path": "root.h1",
+                "depth": 3,
+                "hypothesis": "seal wear",
+                "gemba_result": "NOK",
+                "gemba_notes": "seal cracked",
+                "is_root_cause": True,
+                "countermeasure": "",
+            }
+        ],
+    )
+    result = await countermeasure_generator(state)
+    updated = result["why_nodes"][0]
+    assert updated["countermeasure"] == "replace the seal"
 
 
 @pytest.mark.asyncio

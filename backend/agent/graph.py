@@ -92,6 +92,16 @@ _WHY_GENERATOR_SYSTEM_PROMPT = (
 )
 
 
+def _strip_fences(content: str) -> str:
+    return (
+        content.strip()
+        .removeprefix("```json")
+        .removeprefix("```")
+        .removesuffix("```")
+        .strip()
+    )
+
+
 def _why_generator_user_prompt(state: OverallState) -> str:
     lines = [
         f"Phenomenon: {state['phenomenon']}",
@@ -182,18 +192,22 @@ async def why_generator(state: OverallState) -> dict[str, Any]:
         model=OPENROUTER_MODEL,
         messages=cast(list[ChatCompletionMessageParam], messages),
     )
-    content = (final_completion.choices[0].message.content or "[]").strip()
-    content = (
-        content.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    )
+    content = _strip_fences(final_completion.choices[0].message.content or "[]")
     hypotheses = json.loads(content)
 
-    branch_prefix = state["current_branch_path"]
+    active = state.get("active_hypothesis")
+    if active is not None:
+        branch_prefix = active["branch_path"]
+        depth = active["depth"] + 1
+    else:
+        branch_prefix = state["current_branch_path"]
+        depth = state["current_depth"]
+
     pending_hypotheses: list[PendingHypothesis] = [
         {
             "hypothesis": item["hypothesis"],
             "branch_path": f"{branch_prefix}.h{i + 1}",
-            "depth": state["current_depth"],
+            "depth": depth,
             "gemba_instructions": item["gemba_instructions"],
         }
         for i, item in enumerate(hypotheses)
@@ -226,12 +240,100 @@ async def gemba_check(state: OverallState) -> dict[str, Any]:
     return {}
 
 
+_ROOT_CAUSE_VALIDATOR_SYSTEM_PROMPT = (
+    'Respond with ONLY a JSON object: {"is_root_cause": bool, "reasoning": '
+    "string}. is_root_cause is true only if this hypothesis represents a "
+    "fundamental, actionable root cause with no further meaningful "
+    '"why" behind it.'
+)
+
+
+@retry(
+    retry=retry_if_exception_type(
+        (APIConnectionError, RateLimitError, InternalServerError)
+    ),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    stop=stop_after_attempt(3),
+)
 async def root_cause_validator(state: OverallState) -> dict[str, Any]:
-    return {}
+    active = state["active_hypothesis"]
+    assert active is not None
+    why_node = _find_why_node(state, active["branch_path"])
+    assert why_node is not None
+
+    llm_client = get_llm_client()
+    completion = await llm_client.chat.completions.create(
+        model=OPENROUTER_MODEL,
+        messages=cast(
+            list[ChatCompletionMessageParam],
+            [
+                {"role": "system", "content": _ROOT_CAUSE_VALIDATOR_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Phenomenon: {state['phenomenon']}\n"
+                        f"Hypothesis: {why_node['hypothesis']}\n"
+                        f"Gemba result: {why_node['gemba_result']}\n"
+                        f"Gemba notes: {why_node['gemba_notes']}"
+                    ),
+                },
+            ],
+        ),
+    )
+    content = _strip_fences(completion.choices[0].message.content or "{}")
+    verdict = json.loads(content)
+    updated_node: WhyNode = {**why_node, "is_root_cause": verdict["is_root_cause"]}
+
+    return {
+        "why_nodes": [updated_node],
+        "current_depth": why_node["depth"],
+        "current_branch_path": why_node["branch_path"],
+    }
 
 
+_COUNTERMEASURE_SYSTEM_PROMPT = (
+    'Respond with ONLY a JSON object: {"countermeasure": string}. Propose a '
+    "concrete, actionable countermeasure that addresses this hypothesis. It "
+    "may or may not be a confirmed root cause (max investigation depth may "
+    "have been reached first) — word the countermeasure appropriately "
+    "either way, don't assert unwarranted certainty."
+)
+
+
+@retry(
+    retry=retry_if_exception_type(
+        (APIConnectionError, RateLimitError, InternalServerError)
+    ),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    stop=stop_after_attempt(3),
+)
 async def countermeasure_generator(state: OverallState) -> dict[str, Any]:
-    return {}
+    active = state["active_hypothesis"]
+    assert active is not None
+    why_node = _find_why_node(state, active["branch_path"])
+    assert why_node is not None
+
+    llm_client = get_llm_client()
+    completion = await llm_client.chat.completions.create(
+        model=OPENROUTER_MODEL,
+        messages=cast(
+            list[ChatCompletionMessageParam],
+            [
+                {"role": "system", "content": _COUNTERMEASURE_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Phenomenon: {state['phenomenon']}\n"
+                        f"Hypothesis: {why_node['hypothesis']}"
+                    ),
+                },
+            ],
+        ),
+    )
+    content = _strip_fences(completion.choices[0].message.content or "{}")
+    countermeasure = json.loads(content)["countermeasure"]
+    updated_node: WhyNode = {**why_node, "countermeasure": countermeasure}
+    return {"why_nodes": [updated_node]}
 
 
 async def report_generator(state: OverallState) -> dict[str, Any]:
