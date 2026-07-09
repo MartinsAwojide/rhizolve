@@ -52,3 +52,25 @@ async def extract_investigation_params(
     )
     output = ExtractionOutput.model_validate(json.loads(content))
     return output.model_dump()
+
+
+_FIELD_ORDER = ("phenomenon", "domain", "system_or_process_context")
+
+_FIELD_QUESTIONS = {
+    "phenomenon": "What exactly is going wrong?",
+    "domain": "What industry or domain is this in?",
+    "system_or_process_context": "Which system, line, or process is involved?",
+}
+
+
+def fields_needing_confirmation(
+    params: dict[str, Any], threshold: float = 0.7
+) -> list[str]:
+    confidence = params.get("confidence", {})
+    return [field for field in _FIELD_ORDER if confidence.get(field, 0.0) < threshold]
+
+
+def build_missing_fields_prompt(missing_fields: list[str]) -> str | None:
+    if not missing_fields:
+        return None
+    return " ".join(_FIELD_QUESTIONS[field] for field in missing_fields)
