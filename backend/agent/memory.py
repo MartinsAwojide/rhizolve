@@ -4,7 +4,11 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel
 
-from core.config import OPENROUTER_MODEL
+from core.config import (
+    CLAUDE_CONTEXT_WINDOW_TOKENS,
+    COMPACTION_THRESHOLD,
+    OPENROUTER_MODEL,
+)
 from core.memory import make_store
 
 
@@ -73,3 +77,29 @@ async def compact_memory(
     memory.investigation_summaries.append(summary)
     await _save_memory(memory)
     return memory
+
+
+def estimate_token_count(conversation_history: list[dict[str, Any]]) -> int:
+    return sum(
+        len(str(message.get("content", ""))) // 4 for message in conversation_history
+    )
+
+
+def should_compact(
+    conversation_history: list[dict[str, Any]],
+    context_window: int = CLAUDE_CONTEXT_WINDOW_TOKENS,
+    threshold: float = COMPACTION_THRESHOLD,
+) -> bool:
+    return estimate_token_count(conversation_history) >= context_window * threshold
+
+
+async def maybe_compact_memory(
+    user_id: str,
+    conversation_history: list[dict[str, Any]],
+    llm_client: AsyncOpenAI,
+    context_window: int = CLAUDE_CONTEXT_WINDOW_TOKENS,
+    threshold: float = COMPACTION_THRESHOLD,
+) -> UserMemory | None:
+    if not should_compact(conversation_history, context_window, threshold):
+        return None
+    return await compact_memory(user_id, conversation_history, llm_client)
