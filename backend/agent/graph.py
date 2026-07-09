@@ -1,4 +1,4 @@
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import Annotated, Any, Literal, NotRequired, TypedDict
 
 from langgraph.graph import StateGraph
 
@@ -25,6 +25,13 @@ class PendingHypothesis(TypedDict):
     domain_context: NotRequired[str]
 
 
+def _merge_why_nodes(existing: list[WhyNode], update: list[WhyNode]) -> list[WhyNode]:
+    merged = {node["id"]: node for node in existing}
+    for node in update:
+        merged[node["id"]] = node
+    return list(merged.values())
+
+
 class OverallState(TypedDict):
     investigation_id: str
     project_id: str
@@ -34,7 +41,7 @@ class OverallState(TypedDict):
     max_depth: int
     current_depth: int
     current_branch_path: str
-    why_nodes: list[WhyNode]
+    why_nodes: Annotated[list[WhyNode], _merge_why_nodes]
     pending_hypotheses: list[PendingHypothesis]
     domain_context: NotRequired[str]
     active_hypothesis: NotRequired[PendingHypothesis | None]

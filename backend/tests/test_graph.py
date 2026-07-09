@@ -3,6 +3,7 @@ import pytest
 from agent.graph import (
     _check_complete_router,
     _gemba_router,
+    _merge_why_nodes,
     _validate_router,
     _why_router,
     build_graph,
@@ -206,6 +207,167 @@ def test_validate_router_continues_deeper_when_neither():
         ],
     )
     assert _validate_router(state) == "why_generator"
+
+
+def test_merge_why_nodes_appends_new_node():
+    existing = [
+        {
+            "id": "n1",
+            "branch_path": "root.h1",
+            "depth": 1,
+            "hypothesis": "seal wear",
+            "gemba_result": "pending",
+            "gemba_notes": "",
+            "is_root_cause": False,
+            "countermeasure": "",
+        }
+    ]
+    update = [
+        {
+            "id": "n2",
+            "branch_path": "root.h2",
+            "depth": 1,
+            "hypothesis": "pump failure",
+            "gemba_result": "pending",
+            "gemba_notes": "",
+            "is_root_cause": False,
+            "countermeasure": "",
+        }
+    ]
+    merged = _merge_why_nodes(existing, update)
+    assert [node["id"] for node in merged] == ["n1", "n2"]
+    assert merged[0] == existing[0]
+
+
+def test_merge_why_nodes_updates_existing_node_by_id():
+    existing = [
+        {
+            "id": "n1",
+            "branch_path": "root.h1",
+            "depth": 1,
+            "hypothesis": "seal wear",
+            "gemba_result": "pending",
+            "gemba_notes": "",
+            "is_root_cause": False,
+            "countermeasure": "",
+        }
+    ]
+    update = [
+        {
+            "id": "n1",
+            "branch_path": "root.h1",
+            "depth": 1,
+            "hypothesis": "seal wear",
+            "gemba_result": "NOK",
+            "gemba_notes": "seal cracked",
+            "is_root_cause": False,
+            "countermeasure": "",
+        }
+    ]
+    merged = _merge_why_nodes(existing, update)
+    assert len(merged) == 1
+    assert merged[0]["gemba_result"] == "NOK"
+    assert merged[0]["gemba_notes"] == "seal cracked"
+
+
+def test_merge_why_nodes_preserves_insertion_order():
+    existing = [
+        {
+            "id": "n1",
+            "branch_path": "root.h1",
+            "depth": 1,
+            "hypothesis": "seal wear",
+            "gemba_result": "pending",
+            "gemba_notes": "",
+            "is_root_cause": False,
+            "countermeasure": "",
+        },
+        {
+            "id": "n2",
+            "branch_path": "root.h2",
+            "depth": 1,
+            "hypothesis": "pump failure",
+            "gemba_result": "pending",
+            "gemba_notes": "",
+            "is_root_cause": False,
+            "countermeasure": "",
+        },
+    ]
+    update = [
+        {
+            "id": "n1",
+            "branch_path": "root.h1",
+            "depth": 1,
+            "hypothesis": "seal wear",
+            "gemba_result": "OK",
+            "gemba_notes": "seal fine",
+            "is_root_cause": False,
+            "countermeasure": "",
+        }
+    ]
+    merged = _merge_why_nodes(existing, update)
+    assert [node["id"] for node in merged] == ["n1", "n2"]
+    assert merged[0]["gemba_result"] == "OK"
+
+
+@pytest.mark.asyncio
+async def test_graph_merges_why_nodes_across_state_updates():
+    checkpointer, ctx = await make_checkpointer()
+    try:
+        graph = build_graph().compile(checkpointer=checkpointer)
+        config = {"configurable": {"thread_id": "test-merge-why-nodes"}}
+
+        await graph.aupdate_state(
+            config,
+            {
+                "investigation_id": "inv-001",
+                "project_id": "proj-001",
+                "phenomenon": "Glue tank overflowed",
+                "domain": "manufacturing",
+                "system_or_process_context": "line 3",
+                "max_depth": 5,
+                "current_depth": 1,
+                "current_branch_path": "root",
+                "pending_hypotheses": [],
+                "why_nodes": [
+                    {
+                        "id": "n1",
+                        "branch_path": "root.h1",
+                        "depth": 1,
+                        "hypothesis": "seal wear",
+                        "gemba_result": "pending",
+                        "gemba_notes": "",
+                        "is_root_cause": False,
+                        "countermeasure": "",
+                    }
+                ],
+            },
+            as_node="intake",
+        )
+        await graph.aupdate_state(
+            config,
+            {
+                "why_nodes": [
+                    {
+                        "id": "n2",
+                        "branch_path": "root.h2",
+                        "depth": 1,
+                        "hypothesis": "pump failure",
+                        "gemba_result": "pending",
+                        "gemba_notes": "",
+                        "is_root_cause": False,
+                        "countermeasure": "",
+                    }
+                ]
+            },
+            as_node="intake",
+        )
+
+        snapshot = await graph.aget_state(config)
+        ids = {node["id"] for node in snapshot.values["why_nodes"]}
+        assert ids == {"n1", "n2"}
+    finally:
+        await ctx.__aexit__(None, None, None)
 
 
 @pytest.mark.asyncio
