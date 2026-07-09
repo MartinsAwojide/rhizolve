@@ -175,11 +175,11 @@ async def test_compaction_triggered_at_threshold(mock_llm, user_id):
 - T03: Implement `_merge_why_nodes` reducer
 - T04: Implement `why_generator` with Serper + Wikipedia tool binding
 - T04a: Implement `gemba_dispatcher`'s real body — pop next `pending_hypothesis` into `active_hypothesis` + append a new pending `WhyNode`. Buildable immediately after T04; no other blockers. — DONE
-- T04b: Build the `FiveWhysAgent` wrapper class, **partial**: `start_investigation` + `submit_gemba` only. Needs T04, T04a, and the SP-02 spike (done, see Spike section above). `submit_gemba` writes the Gemba result via `graph.aupdate_state(config, {"why_nodes": [...]}, as_node="gemba_check")`, riding the T03 merge reducer — `gemba_check` itself stays a no-op stub. Unlocks `test_graph_reaches_hypothesis_review_on_start`.
+- T04b: Build the `FiveWhysAgent` wrapper class, **partial**: `start_investigation` + `submit_gemba` only. Needs T04, T04a, and the SP-02 spike (done, see Spike section above). `submit_gemba` writes the Gemba result via `graph.aupdate_state(config, {"why_nodes": [...]}, as_node="gemba_check")`, riding the T03 merge reducer — `gemba_check` itself stays a no-op stub. Unlocks `test_graph_reaches_hypothesis_review_on_start`. — DONE. `FiveWhysAgent.__init__` compiles with `interrupt_before=["gemba_dispatcher", "gemba_check"]` (the only way to stop the graph from looping indefinitely through the stub nodes) — this preempts the `interrupt_before` half of T07's scope, so **T07 now only needs to add `interrupt_after=["root_cause_validator", "countermeasure_generator"]`** once T05/T06 land.
 - T04c: Finish the `FiveWhysAgent` wrapper — `submit_validator_review`, `submit_countermeasure_review`, `inject_context`. Blocked on T05 (`root_cause_validator`, `countermeasure_generator`) and T06 (`report_generator`). Unlocks the remaining two given integration tests.
 - T05: Implement `root_cause_validator` and `countermeasure_generator` with structured output
 - T06: Implement `report_generator` writing markdown report
-- T07: Compile with `interrupt_before=["gemba_check", "gemba_dispatcher"]` and `interrupt_after=["root_cause_validator", "countermeasure_generator"]`
+- T07: ~~Compile with `interrupt_before=["gemba_check", "gemba_dispatcher"]` and~~ `interrupt_after=["root_cause_validator", "countermeasure_generator"]` — the `interrupt_before` half was already done by T04b's `FiveWhysAgent.__init__` (see note there); T07 now only needs to add `interrupt_after` once T05/T06 land
 
 **Tests:**
 ```python
