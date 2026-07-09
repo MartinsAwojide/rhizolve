@@ -21,8 +21,10 @@
 
 ## Spike
 
-**SP-02 — `interrupt_after` sequencing with conditional edges**  
+**SP-02 — `interrupt_after` sequencing with conditional edges — DONE**  
 Time-box: 1 day. Question: When `interrupt_after=["root_cause_validator"]` is set, does the graph pause after the node completes but before the conditional edge router runs? Output: Confirmed sequencing with a minimal test graph. Any workaround noted. Done when: 3-node test graph demonstrates correct pause-then-route behaviour.
+
+**Finding:** the router runs in the same superstep as the interrupted node, before execution suspends. `interrupt_after=["b"]` on a graph `a -> b -(router)-> c|d` produces `snapshot.next == ("c",)` immediately after the pause — the router has already resolved and queued its target, it just hasn't executed yet. No workaround needed: `interrupt_before` on the *router's targets* (e.g. `interrupt_before=["gemba_dispatcher"]`, as US-11 T07 and US-12 T01 already specify) is the correct pattern for pausing before a routed node runs, not `interrupt_after` on the router's source. See `backend/tests/test_interrupt_sequencing.py`.
 
 ---
 
@@ -172,6 +174,9 @@ async def test_compaction_triggered_at_threshold(mock_llm, user_id):
 - T02: Implement `_why_router`, `_gemba_router`, `_validate_router`, `_check_complete_router`
 - T03: Implement `_merge_why_nodes` reducer
 - T04: Implement `why_generator` with Serper + Wikipedia tool binding
+- T04a: Implement `gemba_dispatcher`'s real body — pop next `pending_hypothesis` into `active_hypothesis` + append a new pending `WhyNode`. Buildable immediately after T04; no other blockers.
+- T04b: Build the `FiveWhysAgent` wrapper class, **partial**: `start_investigation` + `submit_gemba` only. Needs T04, T04a, and the SP-02 spike (done, see Spike section above). `submit_gemba` writes the Gemba result via `graph.aupdate_state(config, {"why_nodes": [...]}, as_node="gemba_check")`, riding the T03 merge reducer — `gemba_check` itself stays a no-op stub. Unlocks `test_graph_reaches_hypothesis_review_on_start`.
+- T04c: Finish the `FiveWhysAgent` wrapper — `submit_validator_review`, `submit_countermeasure_review`, `inject_context`. Blocked on T05 (`root_cause_validator`, `countermeasure_generator`) and T06 (`report_generator`). Unlocks the remaining two given integration tests.
 - T05: Implement `root_cause_validator` and `countermeasure_generator` with structured output
 - T06: Implement `report_generator` writing markdown report
 - T07: Compile with `interrupt_before=["gemba_check", "gemba_dispatcher"]` and `interrupt_after=["root_cause_validator", "countermeasure_generator"]`

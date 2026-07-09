@@ -33,7 +33,7 @@
 | **SP00** | E05 | Design system spike, UX wireframing spike (Miro/Linear/Together AI synthesis via getdesign.md), DESIGN.md per Google Stitch spec, SVG/asset generation via Opus + Fable | `DESIGN.md` merged and lint-clean before any implementation begins; brand assets and wireframes ready |
 | **SP01** | E01 | Monorepo, CI/CD, Redis, FastAPI skeleton, ADRs | Stack runs locally, CI green, `system_or_process_context` renamed |
 | **SP02** | E02 | Chat agent, Shallow/Deep mode, `/btw` thread, parameter extraction, cross-session memory | Conversational agent answers shallow + triggers deep |
-| **SP03** | E02 | LangGraph graph, all 9 nodes, 4 interrupt points, steering resumes, context injection, compaction | Full investigation completable in tests |
+| **SP03** | E02 | LangGraph graph, all 9 nodes, 4 interrupt points, steering resumes, context injection, compaction. US-11 gained T04a-c (`gemba_dispatcher` body + `FiveWhysAgent` wrapper) to cover a gap no story owned. | Full investigation completable in tests |
 | **SP04** | E03 | Clerk auth integration, org creation, user sync, internal + external invitation | Users can log in, org populated from Clerk |
 | **SP05** | E03 + E04 | RBAC middleware, project CRUD, 6 roles, visibility, Gemba assignment | Projects created, members invited, access enforced |
 | **SP06** | E04 | Real-time presence, driver model, quorum, readiness signal, Gemba attachments, tree reset | Collaborative session features complete |
