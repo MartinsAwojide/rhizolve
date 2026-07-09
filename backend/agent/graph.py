@@ -1,5 +1,6 @@
 import json
 import uuid
+from pathlib import Path
 from typing import Annotated, Any, Literal, NotRequired, TypedDict, cast
 
 from langgraph.graph import StateGraph
@@ -17,7 +18,7 @@ from tenacity import (
 )
 
 from agent.tools import TOOL_FUNCTIONS, TOOL_SCHEMAS
-from core.config import OPENROUTER_MODEL
+from core.config import INVESTIGATIONS_DIR, OPENROUTER_MODEL
 from core.llm import get_llm_client
 
 
@@ -338,8 +339,44 @@ async def countermeasure_generator(state: OverallState) -> dict[str, Any]:
     return {"why_nodes": [updated_node]}
 
 
+def _build_report_markdown(state: OverallState) -> str:
+    lines = [
+        f"# Investigation Report: {state['phenomenon']}",
+        "",
+        f"**Domain:** {state['domain']}",
+        f"**System/process context:** {state['system_or_process_context']}",
+        "",
+        "## Why Tree",
+        "",
+    ]
+    sorted_nodes = sorted(state["why_nodes"], key=lambda n: n["branch_path"])
+    for node in sorted_nodes:
+        marker = " (ROOT CAUSE)" if node["is_root_cause"] else ""
+        lines.append(
+            f"- **{node['branch_path']}** (depth {node['depth']}): "
+            f"{node['hypothesis']}{marker}"
+        )
+        lines.append(f"  - Gemba: {node['gemba_result']} — {node['gemba_notes']}")
+        if node["countermeasure"]:
+            lines.append(f"  - Countermeasure: {node['countermeasure']}")
+
+    root_cause_nodes = [n for n in state["why_nodes"] if n["is_root_cause"]]
+    lines += ["", "## Root Cause", ""]
+    if root_cause_nodes:
+        lines.append(root_cause_nodes[0]["hypothesis"])
+    else:
+        lines.append("Not conclusively identified within the configured max depth.")
+
+    return "\n".join(lines) + "\n"
+
+
 async def report_generator(state: OverallState) -> dict[str, Any]:
-    return {}
+    markdown = _build_report_markdown(state)
+    directory = Path(INVESTIGATIONS_DIR)
+    directory.mkdir(parents=True, exist_ok=True)
+    report_path = directory / f"{state['investigation_id']}.md"
+    report_path.write_text(markdown)
+    return {"report_path": str(report_path)}
 
 
 def _find_why_node(state: OverallState, branch_path: str) -> WhyNode | None:

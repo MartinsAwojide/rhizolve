@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agent.graph import (
+    _build_report_markdown,
     _check_complete_router,
     _gemba_router,
     _merge_why_nodes,
@@ -11,6 +12,7 @@ from agent.graph import (
     build_graph,
     countermeasure_generator,
     gemba_dispatcher,
+    report_generator,
     root_cause_validator,
 )
 from core.memory import make_checkpointer
@@ -517,6 +519,90 @@ async def test_countermeasure_generator_noop_when_no_active_hypothesis():
     assert result == {}
 
 
+def test_build_report_markdown_includes_why_tree_and_root_cause():
+    state = _base_state(
+        phenomenon="Glue tank overflowed",
+        domain="manufacturing",
+        why_nodes=[
+            {
+                "id": "n1",
+                "branch_path": "root.h1",
+                "depth": 1,
+                "hypothesis": "seal wear",
+                "gemba_result": "OK",
+                "gemba_notes": "seal fine",
+                "is_root_cause": False,
+                "countermeasure": "",
+            },
+            {
+                "id": "n2",
+                "branch_path": "root.h1.h1",
+                "depth": 2,
+                "hypothesis": "worn fill valve o-ring",
+                "gemba_result": "NOK",
+                "gemba_notes": "o-ring cracked",
+                "is_root_cause": True,
+                "countermeasure": "replace o-ring on preventive schedule",
+            },
+        ],
+    )
+    markdown = _build_report_markdown(state)
+
+    assert "Glue tank overflowed" in markdown
+    assert "manufacturing" in markdown
+    assert "root.h1" in markdown
+    assert "root.h1.h1" in markdown
+    assert "worn fill valve o-ring" in markdown
+    assert "replace o-ring on preventive schedule" in markdown
+    assert "## Root Cause" in markdown
+
+
+def test_build_report_markdown_notes_missing_root_cause():
+    state = _base_state(
+        why_nodes=[
+            {
+                "id": "n1",
+                "branch_path": "root.h1",
+                "depth": 1,
+                "hypothesis": "seal wear",
+                "gemba_result": "NOK",
+                "gemba_notes": "seal cracked",
+                "is_root_cause": False,
+                "countermeasure": "",
+            }
+        ],
+    )
+    markdown = _build_report_markdown(state)
+
+    assert "Not conclusively identified" in markdown
+
+
+@pytest.mark.asyncio
+async def test_report_generator_writes_file_and_returns_path(monkeypatch, tmp_path):
+    monkeypatch.setattr("agent.graph.INVESTIGATIONS_DIR", str(tmp_path))
+    state = _base_state(
+        investigation_id="inv-report-test",
+        why_nodes=[
+            {
+                "id": "n1",
+                "branch_path": "root.h1",
+                "depth": 1,
+                "hypothesis": "seal wear",
+                "gemba_result": "NOK",
+                "gemba_notes": "seal cracked",
+                "is_root_cause": True,
+                "countermeasure": "replace seal",
+            }
+        ],
+    )
+    result = await report_generator(state)
+
+    report_path = tmp_path / "inv-report-test.md"
+    assert result["report_path"] == str(report_path)
+    assert report_path.exists()
+    assert report_path.read_text() == _build_report_markdown(state)
+
+
 @pytest.mark.asyncio
 async def test_graph_merges_why_nodes_across_state_updates():
     checkpointer, ctx = await make_checkpointer()
@@ -578,11 +664,14 @@ async def test_graph_merges_why_nodes_across_state_updates():
 
 
 @pytest.mark.asyncio
-async def test_graph_runs_start_to_finish_with_real_redis_checkpointer(monkeypatch):
+async def test_graph_runs_start_to_finish_with_real_redis_checkpointer(
+    monkeypatch, tmp_path
+):
     async def _empty_why_generator(state):
         return {"pending_hypotheses": []}
 
     monkeypatch.setattr("agent.graph.why_generator", _empty_why_generator)
+    monkeypatch.setattr("agent.graph.INVESTIGATIONS_DIR", str(tmp_path))
 
     checkpointer, ctx = await make_checkpointer()
     try:
