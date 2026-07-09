@@ -7,6 +7,7 @@ from agent.graph import (
     _validate_router,
     _why_router,
     build_graph,
+    gemba_dispatcher,
 )
 from core.memory import make_checkpointer
 
@@ -311,6 +312,86 @@ def test_merge_why_nodes_preserves_insertion_order():
 
 
 @pytest.mark.asyncio
+async def test_gemba_dispatcher_pops_next_pending_into_active_hypothesis():
+    state = _base_state(
+        pending_hypotheses=[
+            {
+                "hypothesis": "seal wear",
+                "branch_path": "root.h1",
+                "depth": 1,
+                "gemba_instructions": "inspect seal",
+            },
+            {
+                "hypothesis": "pump failure",
+                "branch_path": "root.h2",
+                "depth": 1,
+                "gemba_instructions": "inspect pump",
+            },
+        ]
+    )
+    result = await gemba_dispatcher(state)
+    assert result["active_hypothesis"] == {
+        "hypothesis": "seal wear",
+        "branch_path": "root.h1",
+        "depth": 1,
+        "gemba_instructions": "inspect seal",
+    }
+
+
+@pytest.mark.asyncio
+async def test_gemba_dispatcher_creates_pending_why_node_at_branch_path():
+    state = _base_state(
+        pending_hypotheses=[
+            {
+                "hypothesis": "seal wear",
+                "branch_path": "root.h1",
+                "depth": 1,
+                "gemba_instructions": "inspect seal",
+            }
+        ]
+    )
+    result = await gemba_dispatcher(state)
+    new_nodes = result["why_nodes"]
+    assert len(new_nodes) == 1
+    node = new_nodes[0]
+    assert node["branch_path"] == "root.h1"
+    assert node["depth"] == 1
+    assert node["hypothesis"] == "seal wear"
+    assert node["gemba_result"] == "pending"
+    assert node["is_root_cause"] is False
+    assert node["id"]
+
+
+@pytest.mark.asyncio
+async def test_gemba_dispatcher_removes_dispatched_hypothesis_from_queue():
+    state = _base_state(
+        pending_hypotheses=[
+            {
+                "hypothesis": "seal wear",
+                "branch_path": "root.h1",
+                "depth": 1,
+                "gemba_instructions": "inspect seal",
+            },
+            {
+                "hypothesis": "pump failure",
+                "branch_path": "root.h2",
+                "depth": 1,
+                "gemba_instructions": "inspect pump",
+            },
+        ]
+    )
+    result = await gemba_dispatcher(state)
+    assert result["pending_hypotheses"] == [
+        {
+            "hypothesis": "pump failure",
+            "branch_path": "root.h2",
+            "depth": 1,
+            "gemba_instructions": "inspect pump",
+        }
+    ]
+
+
+@pytest.mark.asyncio
 async def test_graph_merges_why_nodes_across_state_updates():
     checkpointer, ctx = await make_checkpointer()
     try:
@@ -371,7 +452,12 @@ async def test_graph_merges_why_nodes_across_state_updates():
 
 
 @pytest.mark.asyncio
-async def test_graph_runs_start_to_finish_with_real_redis_checkpointer():
+async def test_graph_runs_start_to_finish_with_real_redis_checkpointer(monkeypatch):
+    async def _empty_why_generator(state):
+        return {"pending_hypotheses": []}
+
+    monkeypatch.setattr("agent.graph.why_generator", _empty_why_generator)
+
     checkpointer, ctx = await make_checkpointer()
     try:
         graph = build_graph().compile(checkpointer=checkpointer)

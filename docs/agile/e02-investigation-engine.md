@@ -174,7 +174,7 @@ async def test_compaction_triggered_at_threshold(mock_llm, user_id):
 - T02: Implement `_why_router`, `_gemba_router`, `_validate_router`, `_check_complete_router`
 - T03: Implement `_merge_why_nodes` reducer
 - T04: Implement `why_generator` with Serper + Wikipedia tool binding
-- T04a: Implement `gemba_dispatcher`'s real body — pop next `pending_hypothesis` into `active_hypothesis` + append a new pending `WhyNode`. Buildable immediately after T04; no other blockers.
+- T04a: Implement `gemba_dispatcher`'s real body — pop next `pending_hypothesis` into `active_hypothesis` + append a new pending `WhyNode`. Buildable immediately after T04; no other blockers. — DONE
 - T04b: Build the `FiveWhysAgent` wrapper class, **partial**: `start_investigation` + `submit_gemba` only. Needs T04, T04a, and the SP-02 spike (done, see Spike section above). `submit_gemba` writes the Gemba result via `graph.aupdate_state(config, {"why_nodes": [...]}, as_node="gemba_check")`, riding the T03 merge reducer — `gemba_check` itself stays a no-op stub. Unlocks `test_graph_reaches_hypothesis_review_on_start`.
 - T04c: Finish the `FiveWhysAgent` wrapper — `submit_validator_review`, `submit_countermeasure_review`, `inject_context`. Blocked on T05 (`root_cause_validator`, `countermeasure_generator`) and T06 (`report_generator`). Unlocks the remaining two given integration tests.
 - T05: Implement `root_cause_validator` and `countermeasure_generator` with structured output

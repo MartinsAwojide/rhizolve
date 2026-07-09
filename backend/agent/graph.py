@@ -1,4 +1,5 @@
 import json
+import uuid
 from typing import Annotated, Any, Literal, NotRequired, TypedDict, cast
 
 from langgraph.graph import StateGraph
@@ -202,7 +203,23 @@ async def why_generator(state: OverallState) -> dict[str, Any]:
 
 
 async def gemba_dispatcher(state: OverallState) -> dict[str, Any]:
-    return {}
+    pending = state["pending_hypotheses"]
+    next_hypothesis = pending[0]
+    new_node: WhyNode = {
+        "id": str(uuid.uuid4()),
+        "branch_path": next_hypothesis["branch_path"],
+        "depth": next_hypothesis["depth"],
+        "hypothesis": next_hypothesis["hypothesis"],
+        "gemba_result": "pending",
+        "gemba_notes": "",
+        "is_root_cause": False,
+        "countermeasure": "",
+    }
+    return {
+        "active_hypothesis": next_hypothesis,
+        "pending_hypotheses": pending[1:],
+        "why_nodes": [new_node],
+    }
 
 
 async def gemba_check(state: OverallState) -> dict[str, Any]:
