@@ -79,10 +79,23 @@ async def compact_memory(
     return memory
 
 
+_EPHEMERAL_WEIGHT = 2
+
+
+def mark_ephemeral(
+    messages: list[dict[str, Any]], ephemeral: bool = True
+) -> list[dict[str, Any]]:
+    return [{**message, "ephemeral": ephemeral} for message in messages]
+
+
 def estimate_token_count(conversation_history: list[dict[str, Any]]) -> int:
-    return sum(
-        len(str(message.get("content", ""))) // 4 for message in conversation_history
-    )
+    total = 0
+    for message in conversation_history:
+        tokens = len(str(message.get("content", ""))) // 4
+        if message.get("ephemeral"):
+            tokens *= _EPHEMERAL_WEIGHT
+        total += tokens
+    return total
 
 
 def should_compact(

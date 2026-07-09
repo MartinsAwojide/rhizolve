@@ -7,7 +7,9 @@ from agent.memory import (
     UserMemory,
     add_investigation_summary,
     compact_memory,
+    estimate_token_count,
     load_memory,
+    mark_ephemeral,
     maybe_compact_memory,
     memory_namespace,
     should_compact,
@@ -109,6 +111,29 @@ async def test_maybe_compact_memory_compacts_when_over_threshold():
     assert result is not None
     mock_llm_client.chat.completions.create.assert_called_once()
     assert "compacted summary" in result.investigation_summaries
+
+
+def test_mark_ephemeral_stamps_flag():
+    messages = [{"role": "user", "content": "/btw what is FMEA?"}]
+    marked = mark_ephemeral(messages)
+    assert marked[0]["ephemeral"] is True
+    assert marked[0]["content"] == "/btw what is FMEA?"
+    assert "ephemeral" not in messages[0]
+
+
+def test_ephemeral_messages_count_double_toward_token_estimate():
+    normal = [{"role": "user", "content": "x" * 100}]
+    ephemeral = mark_ephemeral(normal)
+    assert estimate_token_count(ephemeral) == estimate_token_count(normal) * 2
+
+
+def test_should_compact_triggers_earlier_for_ephemeral_history():
+    history = [{"role": "user", "content": "x" * 500}] * 100
+    ephemeral_history = mark_ephemeral(history)
+
+    context_window = estimate_token_count(history) * 2
+    assert should_compact(history, context_window=context_window) is False
+    assert should_compact(ephemeral_history, context_window=context_window) is True
 
 
 @pytest.mark.asyncio
