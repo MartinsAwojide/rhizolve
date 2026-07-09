@@ -77,6 +77,54 @@ async def report_generator(state: OverallState) -> dict[str, Any]:
     return {}
 
 
+def _find_why_node(state: OverallState, branch_path: str) -> WhyNode | None:
+    for node in state["why_nodes"]:
+        if node["branch_path"] == branch_path:
+            return node
+    return None
+
+
+def _why_router(
+    state: OverallState,
+) -> Literal["gemba_dispatcher", "root_cause_validator"]:
+    if state["pending_hypotheses"]:
+        return "gemba_dispatcher"
+    return "root_cause_validator"
+
+
+def _gemba_router(state: OverallState) -> Literal["gemba_check"]:
+    return "gemba_check"
+
+
+def _check_complete_router(
+    state: OverallState,
+) -> Literal["root_cause_validator", "gemba_dispatcher", "why_generator"]:
+    active = state.get("active_hypothesis")
+    why_node = _find_why_node(state, active["branch_path"]) if active else None
+    gemba_result = why_node["gemba_result"] if why_node else None
+
+    if gemba_result == "NOK":
+        return "root_cause_validator"
+
+    if state["pending_hypotheses"]:
+        return "gemba_dispatcher"
+    return "why_generator"
+
+
+def _validate_router(
+    state: OverallState,
+) -> Literal["countermeasure_generator", "why_generator"]:
+    if state["current_depth"] >= state["max_depth"]:
+        return "countermeasure_generator"
+
+    active = state.get("active_hypothesis")
+    why_node = _find_why_node(state, active["branch_path"]) if active else None
+    if why_node is not None and why_node["is_root_cause"]:
+        return "countermeasure_generator"
+
+    return "why_generator"
+
+
 def build_graph() -> StateGraph:
     graph = StateGraph(OverallState)
 
@@ -90,10 +138,10 @@ def build_graph() -> StateGraph:
 
     graph.set_entry_point("intake")
     graph.add_edge("intake", "why_generator")
-    graph.add_edge("why_generator", "gemba_dispatcher")
-    graph.add_edge("gemba_dispatcher", "gemba_check")
-    graph.add_edge("gemba_check", "root_cause_validator")
-    graph.add_edge("root_cause_validator", "countermeasure_generator")
+    graph.add_conditional_edges("why_generator", _why_router)
+    graph.add_conditional_edges("gemba_dispatcher", _gemba_router)
+    graph.add_conditional_edges("gemba_check", _check_complete_router)
+    graph.add_conditional_edges("root_cause_validator", _validate_router)
     graph.add_edge("countermeasure_generator", "report_generator")
     graph.set_finish_point("report_generator")
 
