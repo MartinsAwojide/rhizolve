@@ -32,3 +32,11 @@ class ExtractionOutput(BaseModel):
     domain: str | None = None
     system_or_process_context: str | None = None
     confidence: dict[str, float] = {}
+
+
+class InvestigationSettingsDefaults(BaseModel):
+    phenomenon: str | None = None
+    domain: str | None = None
+    system_or_process_context: str | None = None
+    maturity: str = "unknown"
+    maturity_source: str = "default"
