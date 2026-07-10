@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
+
+from api.middleware.rbac import require_project_role
+from models.project_member import ProjectMember, Role
 
 router = APIRouter()
 
@@ -14,6 +17,7 @@ async def inject_context(
     investigation_id: str,
     payload: ContextInjectionRequest,
     request: Request,
+    _: ProjectMember = Depends(require_project_role(Role.CONTRIBUTOR)),
 ) -> dict[str, str]:
     agent = request.app.state.five_whys_agent
     thread_id = f"{project_id}:{investigation_id}"

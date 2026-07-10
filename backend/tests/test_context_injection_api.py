@@ -3,6 +3,7 @@ import pytest
 from agent.five_whys_agent import FiveWhysAgent
 from api.main import app
 from core.memory import make_checkpointer
+from models.project_member import Role
 
 
 async def _pinned_why_generator(state):
@@ -19,8 +20,9 @@ async def _pinned_why_generator(state):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("role", [None, Role.ANALYST, Role.CONTRIBUTOR])
 async def test_context_injection_endpoint_appends_domain_context(
-    async_client, monkeypatch
+    authed_client, async_client, monkeypatch, add_project_member, role
 ):
     monkeypatch.setattr("agent.graph.why_generator", _pinned_why_generator)
     checkpointer, ctx = await make_checkpointer()
@@ -28,27 +30,41 @@ async def test_context_injection_endpoint_appends_domain_context(
     agent = FiveWhysAgent(checkpointer)
     app.state.five_whys_agent = agent
     try:
-        await _run_context_injection_test(async_client, agent)
+        await _run_context_injection_test(
+            authed_client, async_client, monkeypatch, add_project_member, agent, role
+        )
     finally:
         app.state.five_whys_agent = original_agent
         await ctx.__aexit__(None, None, None)
 
 
-async def _run_context_injection_test(async_client, agent):
+async def _run_context_injection_test(
+    authed_client, async_client, monkeypatch, add_project_member, agent, role
+):
+    r = await authed_client.post(
+        "/api/v1/projects", json={"name": "Test", "visibility": "private"}
+    )
+    project_id = r.json()["id"]
+
+    caller = authed_client
+    if role is not None:
+        await add_project_member(async_client, monkeypatch, project_id, role)
+        caller = async_client
+
     started = await agent.start_investigation(
         phenomenon="Glue overflowed",
         domain="manufacturing",
         system_or_process_context="glue tank fill station, line 3",
-        project_id="proj-001",
+        project_id=project_id,
     )
     investigation_id = started["investigation_id"]
 
-    r = await async_client.post(
-        f"/api/v1/projects/proj-001/investigations/{investigation_id}/context",
+    r = await caller.post(
+        f"/api/v1/projects/{project_id}/investigations/{investigation_id}/context",
         json={"context": "Pump replaced 3 days ago"},
     )
     assert r.status_code == 200
 
-    config = {"configurable": {"thread_id": f"proj-001:{investigation_id}"}}
+    config = {"configurable": {"thread_id": f"{project_id}:{investigation_id}"}}
     snapshot = await agent.graph.aget_state(config)
     assert "Pump replaced 3 days ago" in snapshot.values["domain_context"]

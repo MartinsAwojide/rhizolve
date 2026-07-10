@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.middleware.rbac import require_project_role
 from core.auth import get_current_user
 from core.db import get_db_session
 from models.organisation import Organisation
@@ -107,6 +108,7 @@ async def update_project(
     payload: ProjectUpdate,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _: ProjectMember = Depends(require_project_role(Role.OWNER)),
 ) -> ProjectOut:
     project = await session.get(Project, project_id)
     if project is None:
@@ -125,6 +127,7 @@ async def list_project_members(
     project_id: str,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _: ProjectMember = Depends(require_project_role(Role.VIEWER)),
 ) -> list[ProjectMemberOut]:
     result = await session.execute(
         select(ProjectMember).where(ProjectMember.project_id == project_id)

@@ -16,6 +16,16 @@ class Role(str, enum.Enum):
     VIEWER = "viewer"
 
 
+ROLE_RANK: dict[Role, int] = {
+    Role.OWNER: 0,
+    Role.ANALYST: 1,
+    Role.CONTRIBUTOR: 2,
+    Role.OPERATOR: 3,
+    Role.MANAGER: 4,
+    Role.VIEWER: 5,
+}
+
+
 class ProjectMember(Base):
     __tablename__ = "project_members"
 

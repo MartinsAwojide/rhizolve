@@ -6,6 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from api.main import app
+from models.project_member import ProjectMember, Role
 
 
 @pytest.fixture
@@ -39,6 +40,33 @@ def current_user(authed_client):
 @pytest.fixture
 async def db_session_factory(async_client):
     return app.state.db_sessionmaker
+
+
+@pytest.fixture
+def add_project_member(db_session_factory):
+    async def _add(
+        async_client, monkeypatch, project_id: str, role: Role, status: str = "active"
+    ) -> int:
+        clerk_user_id = f"clerk_user_{uuid.uuid4()}"
+
+        async def _payload(request):
+            return {"sub": clerk_user_id, "email": f"{clerk_user_id}@test.com"}
+
+        monkeypatch.setattr("core.auth.verify_clerk_token", _payload)
+        async_client.headers["Authorization"] = f"Bearer {clerk_user_id}"
+        r = await async_client.post("/api/v1/auth/sync")
+        user_id = r.json()["id"]
+
+        async with db_session_factory() as session:
+            session.add(
+                ProjectMember(
+                    project_id=project_id, user_id=user_id, role=role, status=status
+                )
+            )
+            await session.commit()
+        return user_id
+
+    return _add
 
 
 @pytest.fixture

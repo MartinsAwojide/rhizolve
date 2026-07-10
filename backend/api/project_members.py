@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.middleware.rbac import require_project_role
 from core.auth import get_current_user, get_or_create_user_by_clerk_id
 from core.config import FRONTEND_URL
 from core.db import get_db_session
@@ -52,35 +53,17 @@ class ProjectInvitationOut(BaseModel):
     status: str
 
 
-async def _require_owner(
-    session: AsyncSession, project_id: str, user: User
-) -> ProjectMember:
-    result = await session.execute(
-        select(ProjectMember).where(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == user.id,
-        )
-    )
-    membership = result.scalar_one_or_none()
-    if membership is None or membership.role != Role.OWNER:
-        raise HTTPException(
-            status_code=403, detail="Only the project owner can invite members"
-        )
-    return membership
-
-
 @router.post("/{project_id}/members/internal")
 async def invite_internal_member(
     project_id: str,
     payload: InviteInternalMember,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _: ProjectMember = Depends(require_project_role(Role.OWNER)),
 ) -> ProjectMemberOut:
     project = await session.get(Project, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
-
-    await _require_owner(session, project_id, user)
 
     target_user = await get_or_create_user_by_clerk_id(session, payload.clerk_user_id)
 
@@ -147,12 +130,11 @@ async def invite_external_member(
     payload: InviteExternalMember,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _: ProjectMember = Depends(require_project_role(Role.OWNER)),
 ) -> ProjectInvitationOut:
     project = await session.get(Project, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
-
-    await _require_owner(session, project_id, user)
 
     if payload.role not in EXTERNAL_ALLOWED_ROLES:
         raise HTTPException(
@@ -186,12 +168,11 @@ async def resend_external_invite(
     invitation_id: int,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
+    _: ProjectMember = Depends(require_project_role(Role.OWNER)),
 ) -> ProjectInvitationOut:
     project = await session.get(Project, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
-
-    await _require_owner(session, project_id, user)
 
     result = await session.execute(
         select(ProjectInvitation).where(
