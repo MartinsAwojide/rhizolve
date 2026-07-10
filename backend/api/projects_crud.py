@@ -72,6 +72,7 @@ async def create_project(
         compliance_standards=payload.compliance_standards,
         maturity_level=maturity_level,
         owner_id=user.id,
+        org_id=user.org_id,
     )
     session.add(project)
     await session.flush()

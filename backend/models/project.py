@@ -26,6 +26,9 @@ class Project(Base):
     compliance_standards: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     maturity_level: Mapped[int] = mapped_column(Integer, default=2)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organisations.id"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

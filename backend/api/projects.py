@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from api.middleware.rbac import require_project_role
+from api.middleware.scope import require_internal_scope
 from models.project_member import ProjectMember, Role
 
 router = APIRouter()
@@ -17,7 +18,8 @@ async def inject_context(
     investigation_id: str,
     payload: ContextInjectionRequest,
     request: Request,
-    _: ProjectMember = Depends(require_project_role(Role.CONTRIBUTOR)),
+    _role: ProjectMember = Depends(require_project_role(Role.CONTRIBUTOR)),
+    _scope: ProjectMember = Depends(require_internal_scope),
 ) -> dict[str, str]:
     agent = request.app.state.five_whys_agent
     thread_id = f"{project_id}:{investigation_id}"

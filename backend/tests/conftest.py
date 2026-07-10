@@ -45,12 +45,21 @@ async def db_session_factory(async_client):
 @pytest.fixture
 def add_project_member(db_session_factory):
     async def _add(
-        async_client, monkeypatch, project_id: str, role: Role, status: str = "active"
+        async_client,
+        monkeypatch,
+        project_id: str,
+        role: Role,
+        status: str = "active",
+        clerk_org_id: str | None = None,
     ) -> int:
         clerk_user_id = f"clerk_user_{uuid.uuid4()}"
 
         async def _payload(request):
-            return {"sub": clerk_user_id, "email": f"{clerk_user_id}@test.com"}
+            payload = {"sub": clerk_user_id, "email": f"{clerk_user_id}@test.com"}
+            if clerk_org_id is not None:
+                payload["org_id"] = clerk_org_id
+                payload["org_slug"] = clerk_org_id
+            return payload
 
         monkeypatch.setattr("core.auth.verify_clerk_token", _payload)
         async_client.headers["Authorization"] = f"Bearer {clerk_user_id}"
