@@ -12,6 +12,7 @@ from agent.memory import (
     mark_ephemeral,
     maybe_compact_memory,
     memory_namespace,
+    set_last_used_domain,
     should_compact,
 )
 from core.memory import make_store
@@ -30,6 +31,14 @@ async def test_load_memory_returns_empty_for_new_user():
     assert memory.user_id == user_id
     assert memory.investigation_summaries == []
     assert memory.preferences == {}
+
+
+@pytest.mark.asyncio
+async def test_set_last_used_domain_persists_and_is_retrieved():
+    user_id = f"test-user-{uuid.uuid4()}"
+    await set_last_used_domain(user_id, "manufacturing")
+    memory = await load_memory(user_id)
+    assert memory.preferences["domain"] == "manufacturing"
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -40,3 +40,13 @@ class InvestigationSettingsDefaults(BaseModel):
     system_or_process_context: str | None = None
     maturity: str = "unknown"
     maturity_source: str = "default"
+
+
+class InvestigationSettings(BaseModel):
+    extracted: dict[str, Any] = {}
+    user_overrides: dict[str, Any] = {}
+    static_defaults: dict[str, Any] = {}
+
+    @property
+    def resolved(self) -> dict[str, Any]:
+        return {**self.static_defaults, **self.extracted, **self.user_overrides}

@@ -43,6 +43,13 @@ async def _save_memory(memory: UserMemory) -> None:
         await ctx.__aexit__(None, None, None)
 
 
+async def set_last_used_domain(user_id: str, domain: str) -> UserMemory:
+    memory = await load_memory(user_id)
+    memory.preferences["domain"] = domain
+    await _save_memory(memory)
+    return memory
+
+
 async def add_investigation_summary(user_id: str, investigation: str) -> UserMemory:
     memory = await load_memory(user_id)
     memory.investigation_summaries.append(investigation)

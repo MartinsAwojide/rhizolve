@@ -117,7 +117,7 @@ async def test_just_answer_keeps_deep_mode_primed(async_client):
 - T01: Write `backend/agent/extractor.py` with `extract_investigation_params(conversation_history)` using structured LLM output
 - T02: Write `ExtractionOutput` Pydantic model: `phenomenon`, `domain`, `system_or_process_context`, `confidence` per field
 - T03: Write partial extraction handler — ask only for fields with confidence < 0.7
-- T04: Write `GET /api/v1/investigations/settings/defaults` returning extracted + static defaults
+- T04: Write `GET /api/v1/investigations/settings/defaults` returning extracted + static defaults — was left unwired (endpoint returned only hardcoded static defaults, `extract_investigation_params` never called from the API layer). Actually wired up under US-14 (see below), which changed it to `POST` to accept `conversation_history` in the body.
 
 **Tests:**
 ```python
@@ -276,9 +276,9 @@ async def test_injected_context_appears_in_state(agent):
 - Last used domain stored in user memory for next session
 
 **Tasks:**
-- T01: Write `InvestigationSettings` Pydantic model with `dynamic_defaults: dict` and `merge()` method
-- T02: Write `GET /api/v1/investigations/settings/defaults` for current conversation
-- T03: Store `last_used_domain` in `AsyncRedisStore` at `("memory", user_id, "preferences")`
+- T01: Write `InvestigationSettings` Pydantic model — DONE (`agent/schemas.py`), per the literal given tests: `extracted`/`user_overrides`/`static_defaults` dict fields + `resolved` property (dict-merge precedence), not the task description's `dynamic_defaults`/`merge()` naming.
+- T02: Write `GET .../settings/defaults` for current conversation — DONE, but changed to `POST /api/v1/investigations/settings/defaults` accepting `conversation_history` in the request body. No conversation-history persistence exists anywhere (`/chat` is stateless per-request), so the client passes its in-session history directly. This also completes US-09's previously-unwired T04 (same endpoint).
+- T03: Store `last_used_domain` in `AsyncRedisStore` at `("memory", user_id, "preferences")` — DONE via `set_last_used_domain` (`agent/memory.py`), reusing the existing `UserMemory.preferences: dict[str, str]` field and `load_memory`/`_save_memory` machinery rather than a separate store path (the `preferences` dict already lives inside the `("memory", user_id)` / `"profile"` record). Triggered from the settings/defaults endpoint itself whenever it resolves a concrete `domain` — same endpoint both reads and writes it. `user_id` has no auth-backed identity yet (no e03), so it defaults to `"default"`, matching the `project_id` defaulting pattern from US-11/US-13.
 
 **Tests:**
 ```python
