@@ -5,15 +5,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis.exceptions import RedisError
 
+from agent.five_whys_agent import FiveWhysAgent
 from api.chat import router as chat_router
 from api.investigations import router as investigations_router
+from api.projects import router as projects_router
 from core.config import REDIS_URL
+from core.memory import make_checkpointer
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.redis = redis.from_url(REDIS_URL)
+    checkpointer, checkpointer_ctx = await make_checkpointer()
+    app.state.five_whys_agent = FiveWhysAgent(checkpointer)
     yield
+    await checkpointer_ctx.__aexit__(None, None, None)
     await app.state.redis.aclose()
 
 
@@ -28,6 +34,7 @@ app.add_middleware(
 
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(investigations_router, prefix="/api/v1/investigations")
+app.include_router(projects_router, prefix="/api/v1/projects")
 
 
 @app.get("/api/v1/health")

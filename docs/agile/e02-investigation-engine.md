@@ -250,9 +250,9 @@ async def test_countermeasure_rejection_reruns_generator(agent, mock_llm):
 - Verbose mode: agent acknowledges injection conversationally
 
 **Tasks:**
-- T01: Write `POST .../context` endpoint calling `graph.aupdate_state`
-- T02: Append format: `[{timestamp}] User: {context}`
-- T03: Write `inject_context` method on `FiveWhysAgent`
+- T01: Write `POST .../context` endpoint calling `graph.aupdate_state` — DONE. New `api/projects.py` router mounted at `/api/v1/projects`, endpoint `POST /{project_id}/investigations/{investigation_id}/context`. First wiring of `FiveWhysAgent` into the API layer — a single shared instance built once in `api/main.py`'s `lifespan` (via `make_checkpointer()`), stored on `app.state.five_whys_agent`, mirroring the existing `app.state.redis` pattern. Route is project-scoped (`/api/v1/projects/{pid}/investigations/{iid}/context`) per the shape used by e03 (auth)/e04 (project CRUD), which don't exist yet — no auth applied yet, will slot in without a path change when those epics land.
+- T02: Append format: `[{timestamp}] User: {context}` — DONE (US-11 T04c, `FiveWhysAgent.inject_context`).
+- T03: Write `inject_context` method on `FiveWhysAgent` — DONE (US-11 T04c).
 
 **Tests:**
 ```python
