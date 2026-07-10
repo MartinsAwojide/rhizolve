@@ -20,8 +20,10 @@
 
 ## Spike
 
-**SP-03 — Clerk SDK FastAPI integration**  
+**SP-03 — Clerk SDK FastAPI integration — DONE**  
 Time-box: 0.5 day. Question: Does `clerk-backend-api` Python SDK verify session tokens cleanly in FastAPI `Depends`, or is raw JWT verification via `python-jose` more reliable? Output: Library and approach selected. Done when: `get_current_user` dependency returns a `User` object from a valid Clerk token.
+
+**Finding:** `clerk-backend-api` (official SDK, v6.0.1, MIT) selected over `python-jose` (unmaintained, CVE-2024-33663) and over `fastapi-clerk-auth`'s `ClerkHTTPBearer` (a legitimate alternative used in related production-course repos, but a third-party JWKS reimplementation rather than Clerk's maintained path — its richer `SessionAuthObjectV2` claim modeling, incl. `org_id`/`org_role`, matters once US-16/US-19 land). Correct current usage verified directly against `clerk-sdk-python` source at HEAD (not the official example repo, which is from April 2025 and imports from a path — top-level `clerk_backend_api` — that no longer re-exports these symbols): `from clerk_backend_api.security import authenticate_request_async, AuthenticateRequestOptions`, called as `await authenticate_request_async(request, AuthenticateRequestOptions(secret_key=..., authorized_parties=...))`, returning a `RequestState` with `.is_signed_in`/`.payload`/`.reason`. See `backend/core/auth.py`.
 
 ---
 
@@ -36,12 +38,14 @@ Time-box: 0.5 day. Question: Does `clerk-backend-api` Python SDK verify session 
 - Invalid session redirects to Clerk login page
 
 **Tasks:**
-- T01: `uv add clerk-backend-api` in `backend/`; `pnpm add @clerk/clerk-react` in `frontend/web/`
-- T02: Write `backend/core/auth.py` with `get_current_user(credentials) -> User` dependency
-- T03: Write `backend/models/user.py` with `clerk_user_id`, `email`, `display_name`, `org_id`
-- T04: Write `POST /api/v1/auth/sync` — creates/updates user record from Clerk identity on first login
-- T05: Add Clerk `<SignIn/>` and `<SignUp/>` to React routing
-- T06: Wrap protected routes with Clerk `<SignedIn>` guard
+- T01: `uv add clerk-backend-api` in `backend/`; `pnpm add @clerk/clerk-react` in `frontend/web/` — backend half DONE (`clerk-backend-api`, plus `sqlalchemy[asyncio]`/`asyncpg`/`psycopg[binary]`/`alembic` per ADR-009, none of which were part of the original task but were required to persist `User` at all). Frontend half (`@clerk/clerk-react`) explicitly deferred to a dedicated frontend pass — this story was scoped backend-only.
+- T02: Write `backend/core/auth.py` with `get_current_user(credentials) -> User` dependency — DONE, but as `get_current_user(request, session) -> User`, not `(credentials) -> User`: takes the FastAPI `Request` directly (satisfies `clerk_backend_api`'s `Requestish` protocol) plus a DB session dependency, since verification and persistence are both needed. Upserts on every call (see below), not just a lookup.
+- T03: Write `backend/models/user.py` with `clerk_user_id`, `email`, `display_name`, `org_id` — DONE. `org_id` is a plain nullable string column, not yet a foreign key — `Organisation` itself is US-16's concern. Backed by real Postgres (ADR-009), migration `alembic/versions/75016da78c11_create_users_table.py`.
+- T04: Write `POST /api/v1/auth/sync` — DONE (`api/auth.py`). `get_current_user` itself also upserts on every authenticated request (`GET /api/v1/users/me` included) — a deliberate judgment call beyond the literal task: it makes "returning user restores session" work on any authenticated call, not only right after an explicit sync, closing a chicken-and-egg gap between first Clerk login and the first local `User` row. `/auth/sync` is an explicit, idempotent call to the same upsert path.
+- T05: Add Clerk `<SignIn/>` and `<SignUp/>` to React routing — deferred to a frontend pass.
+- T06: Wrap protected routes with Clerk `<SignedIn>` guard — deferred to a frontend pass.
+
+**Given test fixture shape not literally reusable:** the doc's tests assume a `mock_clerk.verify_token` object; the actual call shape is `await authenticate_request_async(...)` returning a `RequestState`, not a bare `verify_token()`. `core/auth.py` exposes `verify_clerk_token(request) -> dict | None` as the monkeypatch seam instead (`backend/tests/test_auth.py` patches `core.auth.verify_clerk_token` directly) — same pattern already used all session for `agent.graph.why_generator` etc. The given tests' *behavior* (valid token → 200, first login → persisted record) is what's actually implemented and tested; the fixture plumbing differs.
 
 **Tests:**
 ```python
