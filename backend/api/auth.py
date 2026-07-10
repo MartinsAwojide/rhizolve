@@ -14,7 +14,7 @@ class UserOut(BaseModel):
     clerk_user_id: str
     email: str | None
     display_name: str | None
-    org_id: str | None
+    org_id: int | None
 
 
 @router.post("/sync")
