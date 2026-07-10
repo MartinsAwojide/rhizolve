@@ -45,6 +45,12 @@ Koog, Cactus, FastMCP 3.0, and `langgraph-checkpoint-redis` all move faster than
 
 More generally: whenever a framework/library behaves unexpectedly (error, wrong output, API mismatch with training data), research the corresponding GitHub repo's Issues (and closed PRs) for fixes, workarounds, or confirmation before guessing from memory — not just for the sparse-docs packages named above. Read-only research only: never open, comment on, or otherwise create issues/PRs on a third-party repo — that requires explicit approval, which will not be granted proactively.
 
+## Research must be current, not just remembered
+
+Spike research (`## Spike` sections in `docs/agile/e*.md`) exists specifically to answer questions a model's training data can't reliably answer — library version behavior, API shape, pricing, availability — so a spike's output is only as good as how current its inputs are. Don't resolve a spike, or any other research task on this project, from training-data recall alone. Verify against a live source (official docs, changelog, GitHub repo at its current `HEAD`, package registry) before writing the finding down, and note the verification date in the spike's output.
+
+Design decisions — ADRs, spike conclusions, dependency choices — must not rest on obsolete information or on anything with a known training cutoff. If a library, API, or pricing model may have changed since a model's cutoff, treat that as a reason to check, not a reason to hedge with a caveat and move on.
+
 ## Permissions
 
 **Safe without asking:** reading files, running tests, linting, `uv sync` / `pnpm install` against an existing lockfile.
