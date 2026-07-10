@@ -10,6 +10,7 @@ from core.db import Base
 from models import (  # noqa: F401  (register with Base.metadata)
     organisation,
     project,
+    project_invitation,
     project_member,
     user,
 )

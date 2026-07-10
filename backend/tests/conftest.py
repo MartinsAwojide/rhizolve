@@ -37,6 +37,11 @@ def current_user(authed_client):
 
 
 @pytest.fixture
+async def db_session_factory(async_client):
+    return app.state.db_sessionmaker
+
+
+@pytest.fixture
 def mock_llm(monkeypatch):
     mock_client = AsyncMock()
     canned_content = json.dumps(

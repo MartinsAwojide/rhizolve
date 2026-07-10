@@ -21,3 +21,23 @@ async def send_invitation_email(to_email: str, project_name: str, role: str) -> 
         sg.client.mail.send.post(request_body=mail)
 
     await asyncio.to_thread(_send)
+
+
+async def send_external_invitation_email(
+    to_email: str, project_name: str, role: str, invite_link: str
+) -> None:
+    def _send() -> None:
+        sg = SendGridAPIClient(api_key=SENDGRID_API_KEY)
+        mail = Mail(
+            Email(SENDGRID_FROM_EMAIL),
+            To(to_email),
+            f"You've been invited to {project_name}",
+            Content(
+                "text/html",
+                f"You've been invited to <strong>{project_name}</strong> as {role}. "
+                f'<a href="{invite_link}">Accept invitation</a> (expires in 7 days).',
+            ),
+        ).get()
+        sg.client.mail.send.post(request_body=mail)
+
+    await asyncio.to_thread(_send)
