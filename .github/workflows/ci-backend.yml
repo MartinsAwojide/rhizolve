@@ -23,6 +23,19 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 5
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: rhizolve
+          POSTGRES_PASSWORD: rhizolve
+          POSTGRES_DB: rhizolve
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rhizolve"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -56,10 +69,18 @@ jobs:
         working-directory: backend
         run: uv run mypy .
 
+      - name: Alembic upgrade
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://rhizolve:rhizolve@localhost:5432/rhizolve
+        run: uv run alembic upgrade head
+
       - name: Pytest
         working-directory: backend
         env:
           REDIS_URL: redis://localhost:6379
+          DATABASE_URL: postgresql+asyncpg://rhizolve:rhizolve@localhost:5432/rhizolve
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+          CLERK_SECRET_KEY: dummy-ci-value-tests-monkeypatch-verify-clerk-token
         run: uv run pytest
