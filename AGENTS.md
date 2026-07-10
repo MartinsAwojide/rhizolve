@@ -51,6 +51,10 @@ Spike research (`## Spike` sections in `docs/agile/e*.md`) exists specifically t
 
 Design decisions — ADRs, spike conclusions, dependency choices — must not rest on obsolete information or on anything with a known training cutoff. If a library, API, or pricing model may have changed since a model's cutoff, treat that as a reason to check, not a reason to hedge with a caveat and move on.
 
+When researching how to implement something against a library or SDK, check the vendor's official blog and the `examples`/`example` folder of the library's official GitHub repo for current, working implementation code — not just prose docs. Treat an example repo's own age skeptically: check its last-updated date and diff its usage against the library's current source (or CHANGELOG) before trusting it, since even an "official" example can go stale relative to the package it demonstrates (confirmed happening with `clerk/fastapi-example` during SP-03 — its import path no longer matched the current SDK's top-level exports).
+
+If related, previously-built repos exist locally (e.g. a past course or project touching the same vendor/library), check those too as a real-world precedent — but weigh them the same way: current official source is the tiebreaker when a local example and the vendor's current API disagree.
+
 ## Permissions
 
 **Safe without asking:** reading files, running tests, linting, `uv sync` / `pnpm install` against an existing lockfile.
