@@ -61,4 +61,5 @@ jobs:
         env:
           REDIS_URL: redis://localhost:6379
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
         run: uv run pytest
