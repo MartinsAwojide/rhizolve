@@ -1,4 +1,5 @@
 import json
+import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -13,6 +14,26 @@ async def async_client():
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             yield client
+
+
+@pytest.fixture
+async def authed_client(async_client, monkeypatch):
+    clerk_user_id = f"clerk_user_{uuid.uuid4()}"
+
+    async def _payload(request):
+        return {"sub": clerk_user_id, "email": f"{clerk_user_id}@test.com"}
+
+    monkeypatch.setattr("core.auth.verify_clerk_token", _payload)
+    async_client.headers["Authorization"] = "Bearer testtoken"
+    r = await async_client.post("/api/v1/auth/sync")
+    assert r.status_code == 200
+    async_client.current_user = r.json()
+    yield async_client
+
+
+@pytest.fixture
+def current_user(authed_client):
+    return authed_client.current_user
 
 
 @pytest.fixture

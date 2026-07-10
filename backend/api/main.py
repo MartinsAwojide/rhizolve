@@ -11,6 +11,7 @@ from api.chat import router as chat_router
 from api.investigations import router as investigations_router
 from api.organisations import router as organisations_router
 from api.projects import router as projects_router
+from api.projects_crud import router as projects_crud_router
 from api.users import router as users_router
 from core.config import REDIS_URL
 from core.db import make_engine, make_sessionmaker
@@ -42,6 +43,7 @@ app.add_middleware(
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(investigations_router, prefix="/api/v1/investigations")
 app.include_router(projects_router, prefix="/api/v1/projects")
+app.include_router(projects_crud_router, prefix="/api/v1/projects")
 app.include_router(auth_router, prefix="/api/v1/auth")
 app.include_router(users_router, prefix="/api/v1/users")
 app.include_router(organisations_router, prefix="/api/v1/organisations")

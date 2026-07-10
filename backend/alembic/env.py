@@ -7,7 +7,12 @@ from alembic import context
 
 from core.config import DATABASE_URL
 from core.db import Base
-from models import organisation, user  # noqa: F401  (register with Base.metadata)
+from models import (  # noqa: F401  (register with Base.metadata)
+    organisation,
+    project,
+    project_member,
+    user,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

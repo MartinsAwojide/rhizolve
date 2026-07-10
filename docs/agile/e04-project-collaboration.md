@@ -43,10 +43,10 @@ Time-box: 1 day. Question: Does nginx on HF Spaces buffer SSE responses despite 
 - Missing name returns 422; project ID follows `proj-{hex8}` format
 
 **Tasks:**
-- T01: Write `backend/models/project.py` with all fields including `compliance_standards`, `maturity_level`
-- T02: Alembic migrations for `projects`, `project_members`
-- T03: Write `POST /api/v1/projects`, `GET /api/v1/projects`, `PATCH /api/v1/projects/{id}`
-- T04: Write `ComplianceProfile(standards)` mapping each standard to required report sections
+- T01: Write `backend/models/project.py` with all fields including `compliance_standards`, `maturity_level` — DONE. `id` follows `proj-{hex8}` (`secrets.token_hex(4)`) per the AC, not an autoincrement int. `compliance_standards` is a Postgres `ARRAY(String)`.
+- T02: Alembic migrations for `projects`, `project_members` — DONE (migration `a0b577f91e5b`, hand-written like US-16's — Alembic's `compare_type=False` default and the need to register both new models in `alembic/env.py` make autogenerate unreliable here). `backend/models/project_member.py` also built now (not literally in this story's task list, but explicitly needed by US-17, which this work was done ahead of specifically to unblock).
+- T03: Write `POST /api/v1/projects`, `GET /api/v1/projects`, `PATCH /api/v1/projects/{id}` — DONE (`api/projects_crud.py`, mounted at the same `/api/v1/projects` prefix as US-13's existing `api/projects.py` — no path collision). Also added `GET /api/v1/projects/{id}/members`, not in this task list but required by `test_creator_is_owner`'s given assertion.
+- T04: `ComplianceProfile(standards)` mapping — deferred. No given test exercises it, and it maps standards to *report sections*, which has no real definition before e08 (Reporting & Compliance) exists. Building it now would be inventing structure with nothing to validate it against.
 
 **Tests:**
 ```python
