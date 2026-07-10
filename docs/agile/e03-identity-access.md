@@ -105,10 +105,10 @@ async def test_second_login_does_not_duplicate_org(async_client, mock_clerk, db,
 - Duplicate invite returns 409
 
 **Tasks:**
-- T01: Write `POST /api/v1/projects/{id}/members/internal` accepting `clerk_user_id` and `role`
-- T02: Write `backend/models/project_member.py` with `project_id`, `user_id`, `role`, `status`
-- T03: Send invitation email via Clerk or Resend on invite
-- T04: Write `POST /api/v1/projects/{id}/members/accept`
+- T01: Write `POST /api/v1/projects/{id}/members/internal` accepting `clerk_user_id` and `role` — DONE (`api/project_members.py`). Requires the caller be an `OWNER`-role `ProjectMember` on the project (403 otherwise) — a direct local check, not the general `require_project_role` middleware (that's US-19's own T01; building it generically now would just get replaced). Invitee may not have logged into Rhizolve yet, so a stub `User` row is created by `clerk_user_id` if needed (`core/auth.py`'s `get_or_create_user_by_clerk_id`) — filled in properly on their first real login via the existing upsert path.
+- T02: Write `backend/models/project_member.py` — DONE ahead of this story, under US-20, since it was needed to unblock this one.
+- T03: Send invitation email — DONE, but via **SendGrid**, not the doc's literal "Clerk or Resend" wording (user's explicit choice, reusing a pattern from their own related repos). Verified current: `sendgrid==6.12.5` on PyPI, repo actively maintained. Confirmed the library is fully synchronous (no native async client) and that the official repo's own async-usage example is stale/broken (uses `@asyncio.coroutine`/`asyncio.async()`, both removed from modern Python) — so `core/email.py` wraps the blocking call in `asyncio.to_thread(...)` instead. Best-effort: a send failure is logged, not raised — email delivery isn't guaranteed infra and shouldn't block the invite from being recorded. The AC's other channel, in-app notification, is deferred — no notification system exists anywhere in the codebase yet.
+- T04: Write `POST /api/v1/projects/{id}/members/accept` — DONE.
 
 **Tests:**
 ```python

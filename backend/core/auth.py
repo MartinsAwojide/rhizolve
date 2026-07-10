@@ -60,6 +60,24 @@ async def _upsert_user(
     return result.scalar_one()
 
 
+async def get_or_create_user_by_clerk_id(
+    session: AsyncSession, clerk_user_id: str
+) -> User:
+    """Used when inviting a member who may not have logged into Rhizolve
+    yet — their email/display_name are filled in properly on their first
+    real login via get_current_user's own upsert."""
+    stmt = (
+        pg_insert(User)
+        .values(clerk_user_id=clerk_user_id)
+        .on_conflict_do_nothing(index_elements=[User.clerk_user_id])
+    )
+    await session.execute(stmt)
+    result = await session.execute(
+        select(User).where(User.clerk_user_id == clerk_user_id)
+    )
+    return result.scalar_one()
+
+
 async def get_current_user(
     request: Request, session: AsyncSession = Depends(get_db_session)
 ) -> User:
