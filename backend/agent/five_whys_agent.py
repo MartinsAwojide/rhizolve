@@ -7,6 +7,7 @@ from langgraph.checkpoint.redis.aio import AsyncRedisSaver
 
 from agent.graph import Attachment, WhyNode, build_graph
 from agent.tree_navigation import hard_reset, soft_reset
+from core.conflict import detect_conflict
 from core.pubsub import RedisPubSub, make_channel
 
 _INTERRUPT_TYPES = {
@@ -114,6 +115,19 @@ class FiveWhysAgent:
         node = _find_active_node(snapshot)
         if node is None:
             return await self._status(investigation_id)
+
+        if detect_conflict(
+            {"branch_path": node["branch_path"], "result": result},
+            snapshot.values["why_nodes"],
+        ):
+            return {
+                "conflict": True,
+                "branch_path": node["branch_path"],
+                "existing_result": node["gemba_result"],
+                "incoming_result": result,
+                "incoming_notes": notes,
+            }
+
         updated_node = {
             **node,
             "gemba_result": result,

@@ -316,6 +316,16 @@ def test_no_conflict_when_branch_pending():
     assert detect_conflict({"branch_path": "1.1", "result": "NOK"}, nodes) is False
 ```
 
+**Status (2026-07-11):** Backend slice done (ADR-017). T02's `GembaSyncWorker`
+is Android-side with no backend hook, so detection was wired into the one
+existing write path instead — `FiveWhysAgent.submit_gemba` now runs
+`detect_conflict` before applying a result and returns a conflict payload
+instead of mutating the tree; `api/gemba.py` persists the new `conflicts`
+table row and publishes `conflict_flagged`. T03's resolve route
+(`api/conflicts.py`) is driver-gated and reuses `reset_tree` for the reset
+action. T04 (React `ConflictResolutionPanel`) not started — this closes out
+SP06/E04's backend slice.
+
 ---
 
 ## SP15 Stories — SSE Real-Time Web

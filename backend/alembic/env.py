@@ -9,6 +9,7 @@ from core.config import DATABASE_URL
 from core.db import Base
 from models import (  # noqa: F401  (register with Base.metadata)
     audit_log,
+    conflict,
     organisation,
     project,
     project_invitation,

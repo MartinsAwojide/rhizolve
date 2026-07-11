@@ -130,6 +130,57 @@ async def test_submit_gemba_with_attachments_persists_on_node(agent):
 
 
 @pytest.mark.asyncio
+async def test_submit_gemba_flags_conflict_instead_of_overwriting_closed_branch(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+
+    await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+
+    config = agent._config(investigation_id)
+    closed_node = next(
+        n
+        for n in (await agent.graph.aget_state(config)).values["why_nodes"]
+        if n["branch_path"] == "root.h1"
+    )
+    # Simulate a stale offline-synced result arriving for a branch that has
+    # since been closed live -- force the pointer back onto it.
+    await agent.graph.aupdate_state(
+        config,
+        {
+            "active_hypothesis": {
+                "hypothesis": closed_node["hypothesis"],
+                "branch_path": "root.h1",
+                "depth": closed_node["depth"],
+                "gemba_instructions": "",
+            }
+        },
+        as_node="gemba_dispatcher",
+    )
+
+    result = await agent.submit_gemba(
+        investigation_id, result="OK", notes="synced from device"
+    )
+
+    assert result == {
+        "conflict": True,
+        "branch_path": "root.h1",
+        "existing_result": "NOK",
+        "incoming_result": "OK",
+        "incoming_notes": "synced from device",
+    }
+    unchanged_node = next(
+        n
+        for n in (await agent.graph.aget_state(config)).values["why_nodes"]
+        if n["branch_path"] == "root.h1"
+    )
+    assert unchanged_node["gemba_result"] == "NOK"
+
+
+@pytest.mark.asyncio
 async def test_submit_gemba_noop_when_no_active_hypothesis(monkeypatch):
     async def _empty_why_generator(state):
         return {"pending_hypotheses": []}

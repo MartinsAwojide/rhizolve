@@ -2,9 +2,13 @@ import uuid
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.middleware.rbac import require_project_role
 from api.middleware.scope import get_project_member
+from core.db import get_db_session
+from core.pubsub import make_channel
+from models.conflict import Conflict
 from models.project_member import ProjectMember, Role
 
 router = APIRouter()
@@ -24,6 +28,7 @@ async def submit_gemba_result(
     # submit_gemba_result as allowed for external operator/contributor, so
     # no require_internal_scope() here — that would wrongly block them.
     _role: ProjectMember = Depends(require_project_role(Role.OPERATOR)),
+    session: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """files/transcriptions/transcription_statuses are index-aligned
     parallel lists — the i-th file's transcription metadata is
@@ -55,6 +60,33 @@ async def submit_gemba_result(
     status = await agent.submit_gemba(
         investigation_id, result=result, notes=notes, attachments=attachments
     )
+
+    if status.get("conflict"):
+        conflict = Conflict(
+            project_id=project_id,
+            investigation_id=investigation_id,
+            branch_path=status["branch_path"],
+            existing_result=status["existing_result"],
+            incoming_result=status["incoming_result"],
+            incoming_notes=status["incoming_notes"],
+        )
+        session.add(conflict)
+        await session.commit()
+        await session.refresh(conflict)
+
+        pubsub = request.app.state.pubsub
+        await pubsub.publish(
+            make_channel(project_id, investigation_id),
+            "conflict_flagged",
+            {
+                "conflict_id": conflict.id,
+                "branch_path": conflict.branch_path,
+                "existing_result": conflict.existing_result,
+                "incoming_result": conflict.incoming_result,
+            },
+        )
+        return {**status, "conflict_id": conflict.id}
+
     return {**status, "attachments": attachments}
 
 

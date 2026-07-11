@@ -8,6 +8,7 @@ from redis.exceptions import RedisError
 from agent.five_whys_agent import FiveWhysAgent
 from api.auth import router as auth_router
 from api.chat import router as chat_router
+from api.conflicts import router as conflicts_router
 from api.five_whys_advance import router as five_whys_advance_router
 from api.gemba import router as gemba_router
 from api.invites import router as invites_router
@@ -71,6 +72,7 @@ app.include_router(presence_router, prefix="/api/v1/projects")
 app.include_router(tree_navigation_router, prefix="/api/v1/projects")
 app.include_router(quorum_router, prefix="/api/v1/projects")
 app.include_router(five_whys_advance_router, prefix="/api/v1/projects")
+app.include_router(conflicts_router, prefix="/api/v1/projects")
 
 
 @app.get("/api/v1/health")
