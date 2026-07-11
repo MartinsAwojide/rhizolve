@@ -85,6 +85,8 @@ async def test_maturity_inherits_from_org(authed_client, org_with_maturity_3):
 - T04 (Android): Integrate Moonshine's native Android package; write `DeferredTranscriptionWorker` scheduled via WorkManager, gated on `ActivityManager` CPU/foreground idle signal rather than network state
 - T05: Update `report_generator` to include attachments and transcriptions in markdown and PDF, rendering `transcription_status: "unavailable"` attachments with a "transcription unavailable" note rather than omitting them
 
+**Status (2026-07-11):** Backend slice done (`d488be1`, ADR-013) — T01/T02/T05 complete, but scoped to local-disk storage (not GCS, see ADR-013) and markdown-only report (no PDF). T03 (web Moonshine) and T04 (Android Moonshine + `DeferredTranscriptionWorker`) not started.
+
 **Tests:**
 ```python
 @pytest.mark.asyncio
