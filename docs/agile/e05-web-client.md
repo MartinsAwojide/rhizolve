@@ -170,6 +170,16 @@ it('collapses investigation panel below 1280px', () => {
 })
 ```
 
+**Status (2026-07-11):** Done. `AppLayout` (`src/layouts/AppLayout.tsx`) uses a
+JS-driven `useMediaQuery` hook (not pure CSS) so responsive collapse is
+testable under jsdom, which has no real layout engine — panels toggle via
+the `hidden` attribute, not CSS-only media queries. This also stood up the
+frontend's testing stack (Vitest + RTL + jsdom + MSW) and Tailwind/DESIGN.md
+token pipeline (`tailwind.config.ts`, `src/styles/tokens.css`) for the first
+time, since neither existed before this story; `tests/design/test_token_parity.py`
+Layer 2 (web) now passes. `ProjectSidebar`/`InvestigationPanel` are minimal
+stubs (T02/T03) — real content lands with US-32/US-33/US-35.
+
 ---
 
 ### US-32 — Auth screens and project dashboard render correctly

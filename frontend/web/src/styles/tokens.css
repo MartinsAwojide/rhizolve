@@ -1,0 +1,103 @@
+/* Generated from DESIGN.md's `tokens.colors` / `tokens.nodeStatus` front matter.
+   Keep in sync by hand until a build step reads DESIGN.md directly — see
+   tests/design/test_token_parity.py for the parity check this file must satisfy. */
+
+:root {
+  --color-surface-0: #FAF7F2;
+  --color-surface-1: #F3EEE6;
+  --color-surface-2: #FFFFFF;
+  --color-text-primary: #1C2024;
+  --color-text-secondary: #44494F;
+  --color-text-muted: #5E625F;
+  --color-accent: #0C447C;
+  --color-accent-fill: #185FA5;
+  --color-on-accent: #FFFFFF;
+  --color-success: #0F6E56;
+  --color-danger: #A32D2D;
+  --color-warning: #854F0B;
+
+  --color-node-active: #D85A30;
+  --color-node-confirmed: #D85A30;
+  --color-node-ruled-out: #888780;
+  --color-node-root-cause: #0F6E56;
+  --color-node-suspended: #378ADD;
+  --color-node-conflict: #BA7517;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-pill: 9999px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface-0: #12161C;
+    --color-surface-1: #1A1F27;
+    --color-surface-2: #222833;
+    --color-text-primary: #F4F1EC;
+    --color-text-secondary: #BDB8B0;
+    --color-text-muted: #8A857D;
+    --color-accent: #85B7EB;
+    --color-accent-fill: #378ADD;
+    --color-on-accent: #04121F;
+    --color-success: #5DCAA5;
+    --color-danger: #F09595;
+    --color-warning: #EF9F27;
+
+    --color-node-active: #F0997B;
+    --color-node-confirmed: #F0997B;
+    --color-node-ruled-out: #B4B2A9;
+    --color-node-root-cause: #5DCAA5;
+    --color-node-suspended: #85B7EB;
+    --color-node-conflict: #EF9F27;
+  }
+}
+
+[data-theme='dark'] {
+  --color-surface-0: #12161C;
+  --color-surface-1: #1A1F27;
+  --color-surface-2: #222833;
+  --color-text-primary: #F4F1EC;
+  --color-text-secondary: #BDB8B0;
+  --color-text-muted: #8A857D;
+  --color-accent: #85B7EB;
+  --color-accent-fill: #378ADD;
+  --color-on-accent: #04121F;
+  --color-success: #5DCAA5;
+  --color-danger: #F09595;
+  --color-warning: #EF9F27;
+
+  --color-node-active: #F0997B;
+  --color-node-confirmed: #F0997B;
+  --color-node-ruled-out: #B4B2A9;
+  --color-node-root-cause: #5DCAA5;
+  --color-node-suspended: #85B7EB;
+  --color-node-conflict: #EF9F27;
+}
+
+[data-theme='light'] {
+  --color-surface-0: #FAF7F2;
+  --color-surface-1: #F3EEE6;
+  --color-surface-2: #FFFFFF;
+  --color-text-primary: #1C2024;
+  --color-text-secondary: #44494F;
+  --color-text-muted: #5E625F;
+  --color-accent: #0C447C;
+  --color-accent-fill: #185FA5;
+  --color-on-accent: #FFFFFF;
+  --color-success: #0F6E56;
+  --color-danger: #A32D2D;
+  --color-warning: #854F0B;
+
+  --color-node-active: #D85A30;
+  --color-node-confirmed: #D85A30;
+  --color-node-ruled-out: #888780;
+  --color-node-root-cause: #0F6E56;
+  --color-node-suspended: #378ADD;
+  --color-node-conflict: #BA7517;
+}
