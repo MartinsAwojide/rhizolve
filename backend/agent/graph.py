@@ -22,6 +22,16 @@ from core.config import INVESTIGATIONS_DIR, OPENROUTER_MODEL
 from core.llm import get_llm_client
 
 
+class Attachment(TypedDict):
+    id: str
+    type: Literal["image", "audio"]
+    url: str
+    filename: str
+    content_type: str
+    transcription: NotRequired[str]
+    transcription_status: NotRequired[Literal["pending", "complete", "unavailable"]]
+
+
 class WhyNode(TypedDict):
     id: str
     branch_path: str
@@ -33,7 +43,7 @@ class WhyNode(TypedDict):
     countermeasure: str
     status: NotRequired[Literal["active", "closed", "suspended", "deleted"]]
     model_attribution: NotRequired[str]
-    attachments: NotRequired[list[Any]]
+    attachments: NotRequired[list[Attachment]]
 
 
 class PendingHypothesis(TypedDict):
@@ -364,6 +374,26 @@ def _build_report_markdown(state: OverallState) -> str:
         lines.append(f"  - Gemba: {node['gemba_result']} — {node['gemba_notes']}")
         if node["countermeasure"]:
             lines.append(f"  - Countermeasure: {node['countermeasure']}")
+        for att in node.get("attachments", []):
+            if att["type"] == "audio":
+                status = att.get("transcription_status")
+                if status == "unavailable":
+                    lines.append(
+                        f"  - Attachment ({att['type']}): {att['url']} — "
+                        "transcription unavailable"
+                    )
+                elif att.get("transcription"):
+                    lines.append(
+                        f"  - Attachment ({att['type']}): {att['url']} — "
+                        f"transcript: {att['transcription']}"
+                    )
+                else:
+                    lines.append(
+                        f"  - Attachment ({att['type']}): {att['url']} — "
+                        f"transcription {status or 'pending'}"
+                    )
+            else:
+                lines.append(f"  - Attachment ({att['type']}): {att['url']}")
 
     root_cause_nodes = [n for n in state["why_nodes"] if n["is_root_cause"]]
     lines += ["", "## Root Cause", ""]

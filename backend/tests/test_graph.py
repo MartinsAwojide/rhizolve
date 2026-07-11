@@ -577,6 +577,86 @@ def test_build_report_markdown_notes_missing_root_cause():
     assert "Not conclusively identified" in markdown
 
 
+def test_build_report_markdown_includes_attachment_with_transcription():
+    state = _base_state(
+        why_nodes=[
+            {
+                "id": "n1",
+                "branch_path": "root.h1",
+                "depth": 1,
+                "hypothesis": "seal wear",
+                "gemba_result": "NOK",
+                "gemba_notes": "seal cracked",
+                "is_root_cause": False,
+                "countermeasure": "",
+                "attachments": [
+                    {
+                        "id": "a1",
+                        "type": "audio",
+                        "url": "/attachments/a1.m4a",
+                        "filename": "a1.m4a",
+                        "content_type": "audio/m4a",
+                        "transcription": "Spring visibly cracked",
+                        "transcription_status": "complete",
+                    }
+                ],
+            }
+        ],
+    )
+    markdown = _build_report_markdown(state)
+    assert "Spring visibly cracked" in markdown
+    assert "/attachments/a1.m4a" in markdown
+
+
+def test_build_report_markdown_notes_unavailable_transcription():
+    state = _base_state(
+        why_nodes=[
+            {
+                "id": "n1",
+                "branch_path": "root.h1",
+                "depth": 1,
+                "hypothesis": "seal wear",
+                "gemba_result": "NOK",
+                "gemba_notes": "seal cracked",
+                "is_root_cause": False,
+                "countermeasure": "",
+                "attachments": [
+                    {
+                        "id": "a1",
+                        "type": "audio",
+                        "url": "/attachments/a1.m4a",
+                        "filename": "a1.m4a",
+                        "content_type": "audio/m4a",
+                        "transcription_status": "unavailable",
+                    }
+                ],
+            }
+        ],
+    )
+    markdown = _build_report_markdown(state)
+    assert "transcription unavailable" in markdown.lower()
+    assert "/attachments/a1.m4a" in markdown
+
+
+def test_build_report_markdown_omits_attachments_section_when_node_has_none():
+    state = _base_state(
+        why_nodes=[
+            {
+                "id": "n1",
+                "branch_path": "root.h1",
+                "depth": 1,
+                "hypothesis": "seal wear",
+                "gemba_result": "OK",
+                "gemba_notes": "seal fine",
+                "is_root_cause": False,
+                "countermeasure": "",
+            }
+        ],
+    )
+    markdown = _build_report_markdown(state)
+    assert "Attachment" not in markdown
+
+
 @pytest.mark.asyncio
 async def test_report_generator_writes_file_and_returns_path(monkeypatch, tmp_path):
     monkeypatch.setattr("agent.graph.INVESTIGATIONS_DIR", str(tmp_path))

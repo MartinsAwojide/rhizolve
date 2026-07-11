@@ -5,7 +5,7 @@ from typing import Any, Literal
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.redis.aio import AsyncRedisSaver
 
-from agent.graph import build_graph
+from agent.graph import Attachment, build_graph
 
 _INTERRUPT_TYPES = {
     "gemba_dispatcher": "hypothesis_review",
@@ -69,7 +69,11 @@ class FiveWhysAgent:
         return await self._status(investigation_id)
 
     async def submit_gemba(
-        self, investigation_id: str, result: Literal["OK", "NOK"], notes: str = ""
+        self,
+        investigation_id: str,
+        result: Literal["OK", "NOK"],
+        notes: str = "",
+        attachments: list[Attachment] | None = None,
     ) -> dict[str, Any]:
         config = self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
@@ -80,7 +84,14 @@ class FiveWhysAgent:
         node = _find_active_node(snapshot)
         if node is None:
             return await self._status(investigation_id)
-        updated_node = {**node, "gemba_result": result, "gemba_notes": notes}
+        updated_node = {
+            **node,
+            "gemba_result": result,
+            "gemba_notes": notes,
+            "attachments": (
+                attachments if attachments is not None else node.get("attachments", [])
+            ),
+        }
         await self.graph.aupdate_state(
             config, {"why_nodes": [updated_node]}, as_node="gemba_check"
         )

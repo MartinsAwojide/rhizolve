@@ -9,6 +9,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "anthropic/claude-haiku-4.5")
 SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
 INVESTIGATIONS_DIR = os.getenv("INVESTIGATIONS_DIR", "investigations")
+ATTACHMENTS_DIR = os.getenv("ATTACHMENTS_DIR", "attachments")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql+asyncpg://rhizolve:rhizolve@localhost:5432/rhizolve"

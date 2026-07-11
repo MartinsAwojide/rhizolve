@@ -98,6 +98,38 @@ async def test_submit_gemba_advances_past_dispatch_and_records_result(agent):
 
 
 @pytest.mark.asyncio
+async def test_submit_gemba_with_attachments_persists_on_node(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+
+    attachments = [
+        {
+            "id": "a1",
+            "type": "audio",
+            "url": "/attachments/a1.m4a",
+            "filename": "a1.m4a",
+            "content_type": "audio/m4a",
+            "transcription": "Spring visibly cracked",
+            "transcription_status": "complete",
+        }
+    ]
+    await agent.submit_gemba(
+        investigation_id, result="NOK", notes="seal cracked", attachments=attachments
+    )
+
+    config = agent._config(investigation_id)
+    snapshot = await agent.graph.aget_state(config)
+    node = next(
+        n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
+    )
+    assert node["attachments"] == attachments
+
+
+@pytest.mark.asyncio
 async def test_submit_gemba_noop_when_no_active_hypothesis(monkeypatch):
     async def _empty_why_generator(state):
         return {"pending_hypotheses": []}
