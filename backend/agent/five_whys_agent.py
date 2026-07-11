@@ -6,6 +6,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.redis.aio import AsyncRedisSaver
 
 from agent.graph import Attachment, build_graph
+from core.pubsub import RedisPubSub, make_channel
 
 _INTERRUPT_TYPES = {
     "gemba_dispatcher": "hypothesis_review",
@@ -28,17 +29,36 @@ def _find_active_node(snapshot: Any) -> Any:
 
 
 class FiveWhysAgent:
-    def __init__(self, checkpointer: AsyncRedisSaver):
+    def __init__(
+        self, checkpointer: AsyncRedisSaver, pubsub: RedisPubSub | None = None
+    ):
         self.graph = build_graph().compile(
             checkpointer=checkpointer,
             interrupt_before=["gemba_dispatcher", "gemba_check"],
             interrupt_after=["root_cause_validator", "countermeasure_generator"],
         )
         self._project_ids: dict[str, str] = {}
+        self._pubsub = pubsub
 
     def _config(self, investigation_id: str) -> RunnableConfig:
         project_id = self._project_ids[investigation_id]
         return {"configurable": {"thread_id": f"{project_id}:{investigation_id}"}}
+
+    async def _run_and_publish(
+        self, config: RunnableConfig, investigation_id: str, input_state: Any = None
+    ) -> None:
+        project_id = self._project_ids[investigation_id]
+        async for chunk in self.graph.astream(
+            input_state, config, stream_mode="updates"
+        ):
+            if self._pubsub is None:
+                continue
+            for node_name in chunk:
+                await self._pubsub.publish(
+                    make_channel(project_id, investigation_id),
+                    "node_update",
+                    {"node": node_name, "investigation_id": investigation_id},
+                )
 
     async def start_investigation(
         self,
@@ -51,8 +71,10 @@ class FiveWhysAgent:
         investigation_id = str(uuid.uuid4())
         self._project_ids[investigation_id] = project_id
         config = self._config(investigation_id)
-        await self.graph.ainvoke(
-            {
+        await self._run_and_publish(
+            config,
+            investigation_id,
+            input_state={
                 "investigation_id": investigation_id,
                 "project_id": project_id,
                 "phenomenon": phenomenon,
@@ -64,7 +86,6 @@ class FiveWhysAgent:
                 "why_nodes": [],
                 "pending_hypotheses": [],
             },
-            config,
         )
         return await self._status(investigation_id)
 
@@ -78,7 +99,7 @@ class FiveWhysAgent:
         config = self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
         if snapshot.next == ("gemba_dispatcher",):
-            await self.graph.ainvoke(None, config)
+            await self._run_and_publish(config, investigation_id)
             snapshot = await self.graph.aget_state(config)
 
         node = _find_active_node(snapshot)
@@ -95,7 +116,7 @@ class FiveWhysAgent:
         await self.graph.aupdate_state(
             config, {"why_nodes": [updated_node]}, as_node="gemba_check"
         )
-        await self.graph.ainvoke(None, config)
+        await self._run_and_publish(config, investigation_id)
         return await self._status(investigation_id)
 
     async def submit_validator_review(
@@ -119,7 +140,7 @@ class FiveWhysAgent:
                 config, update, as_node="root_cause_validator"
             )
 
-        await self.graph.ainvoke(None, config)
+        await self._run_and_publish(config, investigation_id)
         return await self._status(investigation_id)
 
     async def submit_countermeasure_review(
@@ -147,7 +168,7 @@ class FiveWhysAgent:
                 config, {"domain_context": appended}, as_node="root_cause_validator"
             )
 
-        await self.graph.ainvoke(None, config)
+        await self._run_and_publish(config, investigation_id)
         return await self._status(investigation_id)
 
     async def submit_hypothesis_review(
@@ -176,7 +197,7 @@ class FiveWhysAgent:
                 config, {"pending_hypotheses": hypotheses}, as_node="why_generator"
             )
 
-        await self.graph.ainvoke(None, config)
+        await self._run_and_publish(config, investigation_id)
         return await self._status(investigation_id)
 
     async def inject_context(self, thread_id: str, context: str) -> None:

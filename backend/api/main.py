@@ -12,21 +12,27 @@ from api.gemba import router as gemba_router
 from api.invites import router as invites_router
 from api.investigations import router as investigations_router
 from api.organisations import router as organisations_router
+from api.presence import router as presence_router
 from api.project_members import router as project_members_router
 from api.projects import router as projects_router
 from api.projects_crud import router as projects_crud_router
+from api.stream import router as stream_router
 from api.users import router as users_router
 from core.config import REDIS_URL
 from core.db import make_engine, make_sessionmaker
 from core.memory import make_checkpointer
+from core.presence import PresenceTracker
+from core.pubsub import RedisPubSub
 from core.storage import LocalAttachmentStorage
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.redis = redis.from_url(REDIS_URL)
+    app.state.pubsub = RedisPubSub(app.state.redis)
+    app.state.presence = PresenceTracker(app.state.redis)
     checkpointer, checkpointer_ctx = await make_checkpointer()
-    app.state.five_whys_agent = FiveWhysAgent(checkpointer)
+    app.state.five_whys_agent = FiveWhysAgent(checkpointer, pubsub=app.state.pubsub)
     app.state.attachment_storage = LocalAttachmentStorage()
     app.state.db_engine = make_engine()
     app.state.db_sessionmaker = make_sessionmaker(app.state.db_engine)
@@ -55,6 +61,8 @@ app.include_router(users_router, prefix="/api/v1/users")
 app.include_router(organisations_router, prefix="/api/v1/organisations")
 app.include_router(invites_router, prefix="/api/v1/invites")
 app.include_router(gemba_router, prefix="/api/v1/projects")
+app.include_router(stream_router, prefix="/api/v1/projects")
+app.include_router(presence_router, prefix="/api/v1/projects")
 
 
 @app.get("/api/v1/health")

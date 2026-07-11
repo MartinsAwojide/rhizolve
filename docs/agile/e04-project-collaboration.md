@@ -155,6 +155,11 @@ async def test_unavailable_transcription_still_shows_audio_in_report(completed_s
 - T02: Publish `user_joined`, `user_left`, `user_editing` events to SSE channel
 - T03: Write React `PresenceBar` and `EditingIndicator` components (SP15)
 
+**Status (2026-07-11):** Backend slice done (ADR-014), built together with US-27 since
+presence rides US-27's SSE transport. T01/T02 complete, via snapshot-on-heartbeat
+rather than Redis keyspace notifications (see ADR-014). T03 (React components) not
+started.
+
 ---
 
 ### US-23 — Driver assigned automatically by seniority
@@ -313,6 +318,13 @@ def test_no_conflict_when_branch_pending():
 - T02: Write SSE stream endpoint using `StreamingResponse` with `X-Accel-Buffering: no`
 - T03: Publish state event after each graph node in `_format_result()`
 - T04: Write `useInvestigationStream` React hook updating TanStack Query cache on each event
+
+**Status (2026-07-11):** Backend slice done (ADR-014), pulled forward ahead of US-22/23-26
+since presence (US-22) needed this transport. T01/T02 complete, route includes `project_id`
+(`.../projects/{pid}/investigations/{iid}/stream`, not the literal path above — matches
+every other route's project-scoped pattern, see ADR-014). T03 done via `graph.astream`
+per-node publishing (not `_format_result()`, which doesn't exist — see ADR-014). T04
+(React hook) not started.
 
 ---
 
