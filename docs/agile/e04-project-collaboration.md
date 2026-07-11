@@ -219,6 +219,12 @@ def test_earlier_join_wins_on_equal_role():
 - T03: Publish `quorum_reached` and `quorum_lost` SSE events
 - T04: React `ReadinessPanel` per participant with quorum progress indicator
 
+**Status (2026-07-11):** Backend slice done (ADR-016), scope expanded to also wrap the 3
+previously-unwrapped steering-advance methods (`hypothesis-review`, `validator-review`,
+`countermeasure-review`) in new routes gated by `require_driver` + `require_quorum`, so the
+quorum gate has real callers. Ready state uses a separate no-TTL Redis namespace, not
+`PresenceTracker` — see ADR-016. React `ReadinessPanel` not started.
+
 **Tests:**
 ```python
 def test_quorum_majority_of_steering_participants():

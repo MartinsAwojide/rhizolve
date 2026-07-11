@@ -8,6 +8,7 @@ from redis.exceptions import RedisError
 from agent.five_whys_agent import FiveWhysAgent
 from api.auth import router as auth_router
 from api.chat import router as chat_router
+from api.five_whys_advance import router as five_whys_advance_router
 from api.gemba import router as gemba_router
 from api.invites import router as invites_router
 from api.investigations import router as investigations_router
@@ -16,6 +17,7 @@ from api.presence import router as presence_router
 from api.project_members import router as project_members_router
 from api.projects import router as projects_router
 from api.projects_crud import router as projects_crud_router
+from api.quorum import router as quorum_router
 from api.stream import router as stream_router
 from api.tree_navigation import router as tree_navigation_router
 from api.users import router as users_router
@@ -24,6 +26,7 @@ from core.db import make_engine, make_sessionmaker
 from core.memory import make_checkpointer
 from core.presence import PresenceTracker
 from core.pubsub import RedisPubSub
+from core.ready import ReadyTracker
 from core.storage import LocalAttachmentStorage
 
 
@@ -32,6 +35,7 @@ async def lifespan(app: FastAPI):
     app.state.redis = redis.from_url(REDIS_URL)
     app.state.pubsub = RedisPubSub(app.state.redis)
     app.state.presence = PresenceTracker(app.state.redis)
+    app.state.ready = ReadyTracker(app.state.redis)
     checkpointer, checkpointer_ctx = await make_checkpointer()
     app.state.five_whys_agent = FiveWhysAgent(checkpointer, pubsub=app.state.pubsub)
     app.state.attachment_storage = LocalAttachmentStorage()
@@ -65,6 +69,8 @@ app.include_router(gemba_router, prefix="/api/v1/projects")
 app.include_router(stream_router, prefix="/api/v1/projects")
 app.include_router(presence_router, prefix="/api/v1/projects")
 app.include_router(tree_navigation_router, prefix="/api/v1/projects")
+app.include_router(quorum_router, prefix="/api/v1/projects")
+app.include_router(five_whys_advance_router, prefix="/api/v1/projects")
 
 
 @app.get("/api/v1/health")
