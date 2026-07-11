@@ -364,12 +364,20 @@ def _build_report_markdown(state: OverallState) -> str:
         "## Why Tree",
         "",
     ]
-    sorted_nodes = sorted(state["why_nodes"], key=lambda n: n["branch_path"])
+    sorted_nodes = sorted(
+        (n for n in state["why_nodes"] if n.get("status", "active") != "deleted"),
+        key=lambda n: n["branch_path"],
+    )
     for node in sorted_nodes:
         marker = " (ROOT CAUSE)" if node["is_root_cause"] else ""
+        suspended_note = (
+            " (SUSPENDED — superseded by later evidence)"
+            if node.get("status") == "suspended"
+            else ""
+        )
         lines.append(
             f"- **{node['branch_path']}** (depth {node['depth']}): "
-            f"{node['hypothesis']}{marker}"
+            f"{node['hypothesis']}{marker}{suspended_note}"
         )
         lines.append(f"  - Gemba: {node['gemba_result']} — {node['gemba_notes']}")
         if node["countermeasure"]:
@@ -395,7 +403,7 @@ def _build_report_markdown(state: OverallState) -> str:
             else:
                 lines.append(f"  - Attachment ({att['type']}): {att['url']}")
 
-    root_cause_nodes = [n for n in state["why_nodes"] if n["is_root_cause"]]
+    root_cause_nodes = [n for n in sorted_nodes if n["is_root_cause"]]
     lines += ["", "## Root Cause", ""]
     if root_cause_nodes:
         lines.append(root_cause_nodes[0]["hypothesis"])
@@ -416,7 +424,10 @@ async def report_generator(state: OverallState) -> dict[str, Any]:
 
 def _find_why_node(state: OverallState, branch_path: str) -> WhyNode | None:
     for node in state["why_nodes"]:
-        if node["branch_path"] == branch_path:
+        if (
+            node["branch_path"] == branch_path
+            and node.get("status", "active") != "deleted"
+        ):
             return node
     return None
 

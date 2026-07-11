@@ -439,6 +439,92 @@ async def test_submit_hypothesis_review_confirm_without_edits_advances_normally(
 
 
 @pytest.mark.asyncio
+async def test_reset_tree_soft_suspends_descendants_via_agent(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+    await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+
+    await agent.reset_tree(investigation_id, "root.h1", "soft")
+
+    config = agent._config(investigation_id)
+    snapshot = await agent.graph.aget_state(config)
+    node = next(
+        n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
+    )
+    assert node["status"] == "suspended"
+
+
+@pytest.mark.asyncio
+async def test_reset_tree_hard_deletes_descendants_via_agent(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+    await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+
+    await agent.reset_tree(investigation_id, "root.h1", "hard")
+
+    config = agent._config(investigation_id)
+    snapshot = await agent.graph.aget_state(config)
+    node = next(
+        n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
+    )
+    assert node["status"] == "deleted"
+
+
+@pytest.mark.asyncio
+async def test_reset_tree_moves_head_pointer(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+    await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+
+    await agent.reset_tree(investigation_id, "root.h1", "soft")
+
+    config = agent._config(investigation_id)
+    snapshot = await agent.graph.aget_state(config)
+    assert snapshot.values["current_branch_path"] == "root.h1"
+
+
+@pytest.mark.asyncio
+async def test_reset_tree_moves_current_depth_to_target_node_depth(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+    await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+
+    config = agent._config(investigation_id)
+    snapshot = await agent.graph.aget_state(config)
+    target_node = next(
+        n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
+    )
+
+    # Simulate a stale current_depth (as if the driver had probed deeper
+    # before resetting back to this shallower branch) — reset_tree must
+    # correct it to the target node's own depth, not leave it stale.
+    await agent.graph.aupdate_state(
+        config, {"current_depth": target_node["depth"] + 3}, as_node="intake"
+    )
+
+    await agent.reset_tree(investigation_id, "root.h1", "soft")
+
+    snapshot = await agent.graph.aget_state(config)
+    assert snapshot.values["current_depth"] == target_node["depth"]
+
+
+@pytest.mark.asyncio
 async def test_start_investigation_tracks_project_id_for_later_calls(agent):
     started = await agent.start_investigation(
         phenomenon="Glue overflowed",

@@ -179,6 +179,11 @@ started.
 - T03: Store current driver in Redis presence record per investigation
 - T04: `require_driver` dependency used by steering and tree reset endpoints
 
+**Status (2026-07-11):** Backend slice done (ADR-015), built together with US-25 since
+`require_driver` is only consumed by US-25's tree/reset endpoint this pass. All 4 tasks
+complete — driver cached in Redis on every presence heartbeat, not recomputed per gated
+request (see ADR-015).
+
 **Tests:**
 ```python
 def test_owner_beats_analyst_for_driver():
@@ -254,6 +259,12 @@ def test_ready_user_who_left_session_does_not_count():
 - T02: Write `backend/agent/tree_navigation.py` with `soft_reset(tree, path)` and `hard_reset(tree, path)`
 - T03: Write `POST .../tree/reset` with `require_driver` dependency
 - T04: Publish `tree_reset` SSE event; log audit entry
+
+**Status (2026-07-11):** Backend slice done (ADR-015), built together with US-23. T01 was
+already satisfied by ADR-013's `WhyNode.status` field. T02/T03/T04 complete — reset never
+removes `WhyNode` entries (tombstones via `status`, since the state reducer would resurrect
+dropped nodes on the next merge — see ADR-015); audit log lives in a new Postgres `audit_log`
+table, not LangGraph state. Web/Android UI not started.
 
 **Tests:**
 ```python

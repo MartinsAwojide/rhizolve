@@ -5,6 +5,7 @@ import pytest
 from agent.graph import (
     _build_report_markdown,
     _check_complete_router,
+    _find_why_node,
     _gemba_router,
     _merge_why_nodes,
     _validate_router,
@@ -655,6 +656,54 @@ def test_build_report_markdown_omits_attachments_section_when_node_has_none():
     )
     markdown = _build_report_markdown(state)
     assert "Attachment" not in markdown
+
+
+def _node(**overrides):
+    node = {
+        "id": "n1",
+        "branch_path": "root.h1",
+        "depth": 1,
+        "hypothesis": "seal wear",
+        "gemba_result": "NOK",
+        "gemba_notes": "seal cracked",
+        "is_root_cause": False,
+        "countermeasure": "",
+    }
+    node.update(overrides)
+    return node
+
+
+def test_report_excludes_deleted_nodes():
+    state = _base_state(why_nodes=[_node(status="deleted")])
+    markdown = _build_report_markdown(state)
+    assert "seal wear" not in markdown
+
+
+def test_report_includes_suspended_nodes_with_note():
+    state = _base_state(why_nodes=[_node(status="suspended")])
+    markdown = _build_report_markdown(state)
+    assert "seal wear" in markdown
+    assert "SUSPENDED" in markdown
+
+
+def test_report_root_cause_search_skips_deleted_root_cause_node():
+    state = _base_state(
+        why_nodes=[_node(status="deleted", is_root_cause=True)],
+    )
+    markdown = _build_report_markdown(state)
+    assert "Not conclusively identified" in markdown
+
+
+def test_find_why_node_returns_none_for_deleted_branch():
+    state = _base_state(why_nodes=[_node(status="deleted")])
+    assert _find_why_node(state, "root.h1") is None
+
+
+def test_find_why_node_returns_suspended_branch():
+    state = _base_state(why_nodes=[_node(status="suspended")])
+    found = _find_why_node(state, "root.h1")
+    assert found is not None
+    assert found["branch_path"] == "root.h1"
 
 
 @pytest.mark.asyncio

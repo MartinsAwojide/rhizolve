@@ -17,6 +17,7 @@ from api.project_members import router as project_members_router
 from api.projects import router as projects_router
 from api.projects_crud import router as projects_crud_router
 from api.stream import router as stream_router
+from api.tree_navigation import router as tree_navigation_router
 from api.users import router as users_router
 from core.config import REDIS_URL
 from core.db import make_engine, make_sessionmaker
@@ -63,6 +64,7 @@ app.include_router(invites_router, prefix="/api/v1/invites")
 app.include_router(gemba_router, prefix="/api/v1/projects")
 app.include_router(stream_router, prefix="/api/v1/projects")
 app.include_router(presence_router, prefix="/api/v1/projects")
+app.include_router(tree_navigation_router, prefix="/api/v1/projects")
 
 
 @app.get("/api/v1/health")

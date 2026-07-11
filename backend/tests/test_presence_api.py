@@ -155,6 +155,87 @@ async def test_presence_heartbeat_non_member_403(
 
 
 @pytest.mark.asyncio
+async def test_first_heartbeat_publishes_driver_changed(authed_client, presence_env):
+    project_id = await _create_project(authed_client)
+    investigation_id = await _start_investigation(presence_env, project_id)
+
+    pubsub = RedisPubSub(app.state.redis)
+    channel = make_channel(project_id, investigation_id)
+    gen = pubsub.subscribe(channel)
+
+    async def listen():
+        async with asyncio.timeout(3.0):
+            async for event in gen:
+                if event["type"] == "driver_changed":
+                    return event
+
+    listener = asyncio.create_task(listen())
+    await asyncio.sleep(0.1)
+
+    url = f"/api/v1/projects/{project_id}/investigations/{investigation_id}/presence/heartbeat"
+    r = await authed_client.post(url, json={})
+    assert r.status_code == 200
+
+    event = await listener
+    assert event["payload"]["driver"]["user_id"] is not None
+
+
+@pytest.mark.asyncio
+async def test_more_senior_joiner_becomes_driver_and_publishes_change(
+    authed_client, async_client, monkeypatch, add_project_member, presence_env
+):
+    project_id = await _create_project(authed_client)
+    investigation_id = await _start_investigation(presence_env, project_id)
+    heartbeat_url = (
+        f"/api/v1/projects/{project_id}/investigations/{investigation_id}"
+        "/presence/heartbeat"
+    )
+
+    owner_clerk_user_id = authed_client.current_user["clerk_user_id"]
+
+    # A contributor joins first — becomes driver as the only candidate.
+    contributor_id = str(
+        await add_project_member(
+            async_client, monkeypatch, project_id, Role.CONTRIBUTOR
+        )
+    )
+    await async_client.post(heartbeat_url, json={})
+
+    pubsub = RedisPubSub(app.state.redis)
+    channel = make_channel(project_id, investigation_id)
+    gen = pubsub.subscribe(channel)
+
+    async def listen():
+        async with asyncio.timeout(3.0):
+            async for event in gen:
+                if event["type"] == "driver_changed":
+                    return event
+
+    listener = asyncio.create_task(listen())
+    await asyncio.sleep(0.1)
+
+    # Re-authenticate the shared client back to the project owner (its
+    # original identity, saved above) and heartbeat second — more senior
+    # role, must become the new driver despite joining later.
+    async def _owner_payload(request):
+        return {
+            "sub": owner_clerk_user_id,
+            "email": f"{owner_clerk_user_id}@test.com",
+        }
+
+    monkeypatch.setattr("core.auth.verify_clerk_token", _owner_payload)
+    authed_client.headers["Authorization"] = f"Bearer {owner_clerk_user_id}"
+    await authed_client.post("/api/v1/auth/sync")
+
+    r = await authed_client.post(heartbeat_url, json={})
+    assert r.status_code == 200
+
+    event = await listener
+    assert event["type"] == "driver_changed"
+    assert event["payload"]["driver"]["user_id"] != contributor_id
+
+
+@pytest.mark.asyncio
 async def test_disconnected_user_removed_within_ttl(
     authed_client, async_client, monkeypatch, add_project_member, presence_env
 ):

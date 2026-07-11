@@ -5,7 +5,8 @@ from typing import Any, Literal
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.redis.aio import AsyncRedisSaver
 
-from agent.graph import Attachment, build_graph
+from agent.graph import Attachment, WhyNode, build_graph
+from agent.tree_navigation import hard_reset, soft_reset
 from core.pubsub import RedisPubSub, make_channel
 
 _INTERRUPT_TYPES = {
@@ -26,6 +27,14 @@ def _find_active_node(snapshot: Any) -> Any:
         for n in snapshot.values["why_nodes"]
         if n["branch_path"] == active["branch_path"]
     )
+
+
+def _why_nodes_to_tree(why_nodes: list[WhyNode]) -> dict[str, WhyNode]:
+    return {n["branch_path"]: n for n in why_nodes}
+
+
+def _tree_to_why_nodes(tree: dict[str, WhyNode]) -> list[WhyNode]:
+    return list(tree.values())
 
 
 class FiveWhysAgent:
@@ -198,6 +207,31 @@ class FiveWhysAgent:
             )
 
         await self._run_and_publish(config, investigation_id)
+        return await self._status(investigation_id)
+
+    async def reset_tree(
+        self,
+        investigation_id: str,
+        branch_path: str,
+        reset_type: Literal["soft", "hard"],
+    ) -> dict[str, Any]:
+        config = self._config(investigation_id)
+        snapshot = await self.graph.aget_state(config)
+        tree = _why_nodes_to_tree(snapshot.values["why_nodes"])
+        reset_fn = soft_reset if reset_type == "soft" else hard_reset
+        updated_tree = reset_fn(tree, branch_path)
+        target_node = tree.get(branch_path)
+        update: dict[str, Any] = {
+            "why_nodes": _tree_to_why_nodes(updated_tree),
+            "current_branch_path": branch_path,
+        }
+        if target_node is not None:
+            update["current_depth"] = target_node["depth"]
+        await self.graph.aupdate_state(
+            config,
+            update,
+            as_node="root_cause_validator",
+        )
         return await self._status(investigation_id)
 
     async def inject_context(self, thread_id: str, context: str) -> None:

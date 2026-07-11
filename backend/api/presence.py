@@ -23,6 +23,7 @@ async def presence_heartbeat(
         investigation_id,
         str(member.user_id),
         member.user.display_name,
+        role=member.role.value,
         editing=editing,
         editing_node=editing_node,
     )
@@ -39,5 +40,7 @@ async def presence_heartbeat(
                 "editing_node": editing_node,
             },
         )
+    if result["driver_changed"]:
+        await pubsub.publish(channel, "driver_changed", {"driver": result["driver"]})
     await pubsub.publish(channel, "presence_snapshot", {"users": result["snapshot"]})
     return {"users": result["snapshot"]}
