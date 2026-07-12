@@ -8,12 +8,15 @@ type ChatResponseBody = {
   response: string | null
   graph_invoked: boolean
   thread_id: string
+  ephemeral?: boolean
   active_mode: ChatMode
 }
 
 export function useConversation() {
   const authFetch = useAuthFetch()
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [btwMessages, setBtwMessages] = useState<ChatMessage[]>([])
+  const [btwOpen, setBtwOpen] = useState(false)
   const [mode, setMode] = useState<ChatMode>('shallow')
   const overriddenRef = useRef(false)
   const threadIdRef = useRef('default')
@@ -23,9 +26,19 @@ export function useConversation() {
     setMode(next)
   }, [])
 
+  const closeBtw = useCallback(() => {
+    setBtwOpen(false)
+  }, [])
+
   const sendMessage = useCallback(
-    async (text: string, _isBtw: boolean) => {
-      setMessages((prev) => [...prev, { type: 'shallow', role: 'user', content: text }])
+    async (text: string, isBtw: boolean) => {
+      const routeToBtw = isBtw && mode === 'deep'
+
+      if (routeToBtw) {
+        setBtwMessages([{ type: 'shallow', role: 'user', content: text }])
+      } else {
+        setMessages((prev) => [...prev, { type: 'shallow', role: 'user', content: text }])
+      }
 
       const data: ChatResponseBody = await authFetch('/api/v1/chat', {
         method: 'POST',
@@ -36,6 +49,17 @@ export function useConversation() {
           thread_id: threadIdRef.current,
         }),
       })
+
+      if (routeToBtw) {
+        if (data.response) {
+          setBtwMessages((prev) => [
+            ...prev,
+            { type: 'shallow', role: 'assistant', content: data.response as string },
+          ])
+        }
+        setBtwOpen(true)
+        return
+      }
 
       threadIdRef.current = data.thread_id
       if (!overriddenRef.current) {
@@ -51,5 +75,5 @@ export function useConversation() {
     [authFetch, mode],
   )
 
-  return { messages, mode, overrideMode, sendMessage }
+  return { messages, btwMessages, btwOpen, closeBtw, mode, overrideMode, sendMessage }
 }

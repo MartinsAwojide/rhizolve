@@ -381,6 +381,29 @@ and `pnpm tsc --noEmit` clean. See ADR-021 for the full decision record.
 - T02: Write `src/features/chat/BtwThread.tsx` — slide-in panel
 - T03: Wire to `POST /api/v1/chat` with `thread_type: "btw"` and separate `thread_id`
 
+**Status: done.** T01 was already built in US-33 (`ChatInput.tsx`'s
+`/^\/btw\b/` detection). T03's `thread_type: "btw"` wording is stale —
+the backend (`backend/agent/btw.py`, built in an earlier story) never
+had such a field; it infers everything from the `/btw` prefix on
+`message` and mints a fresh ephemeral `thread_id` per send via
+`resolve_thread()`. Wired the frontend to that actual contract instead.
+Two decisions confirmed with the user first:
+1. **Mode-gated client-side**: `/btw` only opens the panel when the
+   current mode is `'deep'` (the backend itself doesn't gate by mode);
+   in shallow mode a `/btw`-prefixed message sends normally, no panel.
+2. **`BtwThread.tsx` is read-only** — `resolve_thread()` never continues
+   a prior btw thread (fresh ephemeral id every send), so there's no
+   backend support for multi-turn panel conversation; it just displays
+   the one exchange plus a close button, reusing `ChatBubble`.
+
+Also fixed a real bug found while wiring this: `useConversation`'s single
+`threadIdRef` would have been silently overwritten by a btw reply's
+ephemeral `thread_id`, corrupting the main investigation thread tracking.
+Fixed by branching to separate `btwMessages`/`btwOpen` state that never
+touches `threadIdRef` or the main `mode`. 107/107 `pnpm vitest run`
+green, `pnpm lint` and `pnpm tsc --noEmit` clean. No backend changes, no
+ADR (consuming an already-built, already-tested backend contract).
+
 ---
 
 ## SP10 Stories — Deployment

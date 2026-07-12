@@ -98,4 +98,80 @@ describe('useConversation', () => {
 
     expect(result.current.mode).toBe('deep')
   })
+
+  it('routes a btw exchange to btwMessages and opens the panel when in deep mode', async () => {
+    authFetchMock.mockResolvedValue({
+      response: 'quick answer',
+      graph_invoked: false,
+      thread_id: 'btw-thread-1',
+      ephemeral: true,
+      active_mode: 'deep',
+    })
+    const { result } = renderHook(() => useConversation())
+
+    act(() => {
+      result.current.overrideMode('deep')
+    })
+
+    await act(async () => {
+      await result.current.sendMessage('/btw quick question', true)
+    })
+
+    await waitFor(() =>
+      expect(result.current.btwMessages).toEqual([
+        { type: 'shallow', role: 'user', content: '/btw quick question' },
+        { type: 'shallow', role: 'assistant', content: 'quick answer' },
+      ]),
+    )
+    expect(result.current.btwOpen).toBe(true)
+    expect(result.current.messages).toEqual([])
+  })
+
+  it('treats a btw-prefixed message as normal when in shallow mode', async () => {
+    authFetchMock.mockResolvedValue({
+      response: 'normal answer',
+      graph_invoked: false,
+      thread_id: 'thread-1',
+      active_mode: 'shallow',
+    })
+    const { result } = renderHook(() => useConversation())
+
+    await act(async () => {
+      await result.current.sendMessage('/btw quick question', true)
+    })
+
+    await waitFor(() =>
+      expect(result.current.messages).toEqual([
+        { type: 'shallow', role: 'user', content: '/btw quick question' },
+        { type: 'shallow', role: 'assistant', content: 'normal answer' },
+      ]),
+    )
+    expect(result.current.btwOpen).toBe(false)
+    expect(result.current.btwMessages).toEqual([])
+  })
+
+  it('closeBtw sets btwOpen back to false', async () => {
+    authFetchMock.mockResolvedValue({
+      response: 'quick answer',
+      graph_invoked: false,
+      thread_id: 'btw-thread-1',
+      ephemeral: true,
+      active_mode: 'deep',
+    })
+    const { result } = renderHook(() => useConversation())
+
+    act(() => {
+      result.current.overrideMode('deep')
+    })
+    await act(async () => {
+      await result.current.sendMessage('/btw quick question', true)
+    })
+    expect(result.current.btwOpen).toBe(true)
+
+    act(() => {
+      result.current.closeBtw()
+    })
+
+    expect(result.current.btwOpen).toBe(false)
+  })
 })
