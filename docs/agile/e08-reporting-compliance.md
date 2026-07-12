@@ -28,6 +28,8 @@
 **SP-11 — Audit log storage**  
 Time-box: 1 day. Question: Redis Streams (append-only but ephemeral without AOF config) vs Postgres append-only table (stronger durability guarantee) for ISO 9001 compliance? Output: Decision documented; migration written. Done when: Append-only constraint enforced at DB level and verified by a test that fails on UPDATE.
 
+**Reconciliation note (added during US-38a, 2026-07-13):** [ADR-015](../adr/ADR-015-audit-log-and-driver-cache.md) already answers this spike's Redis-vs-Postgres question — Postgres, `audit_log` table, same reasoning this spike asks for (survives Redis eviction, queryable independent of investigation lifecycle) — but ADR-015 was written for US-25's tree-reset audit events, not for this epic's ISO-compliance reporting scope, and doesn't cover this SP-11's "append-only constraint enforced at DB level, verified by a test that fails on UPDATE" done-when criterion. Whoever picks up E08's first `US-5x` story should treat ADR-015's `audit_log` table as the storage-choice precedent (don't re-litigate Redis Streams vs Postgres), but still needs to add the DB-level append-only constraint (e.g. a `REVOKE UPDATE`/trigger) and its test before this spike counts as formally closed.
+
 ---
 
 ## US-51 — ISO standards selected at project creation

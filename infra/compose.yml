@@ -7,6 +7,17 @@ services:
     volumes:
       - redis-data:/data
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=rhizolve
+      - POSTGRES_PASSWORD=rhizolve
+      - POSTGRES_DB=rhizolve
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
   backend:
     build:
       context: ../backend
@@ -17,8 +28,10 @@ services:
       - ../backend:/app
     environment:
       - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql+psycopg://rhizolve:rhizolve@postgres:5432/rhizolve
     depends_on:
       - redis
+      - postgres
 
   frontend:
     build:
@@ -33,3 +46,4 @@ services:
 
 volumes:
   redis-data:
+  postgres-data:

@@ -27,6 +27,8 @@
 **SP-04 — Email delivery provider**  
 Time-box: 0.5 day. Question: Resend vs Postmark — Python SDK quality, deliverability, free tier? Done when: Test email delivered to real inbox from FastAPI using chosen SDK.
 
+**Closure note (added during US-38a, 2026-07-13):** Neither Resend nor Postmark shipped — `backend/core/email.py` uses **SendGrid** (`sendgrid>=6.12.0` in `backend/pyproject.toml`, `SendGridAPIClient` in `send_invitation_email`/`send_external_invitation_email`), consumed by `api/invites.py`. This spike's comparison was never formally re-run against SendGrid; the choice was made directly during implementation without an ADR recording why. No action needed for the shipped feature (it works, is tested), but if email delivery is revisited, treat "why SendGrid over Resend/Postmark" as still open rather than assuming a documented decision exists.
+
 **SP-05 — SSE reliability on HF Spaces**  
 Time-box: 1 day. Question: Does nginx on HF Spaces buffer SSE responses despite `X-Accel-Buffering: no`? Does Upstash Redis Pub/Sub meet 3-second latency requirement? Done when: SSE event delivered from HF Spaces to browser within 1 second of Pub/Sub publish.
 
