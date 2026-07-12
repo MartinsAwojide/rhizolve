@@ -50,3 +50,28 @@ class InvestigationSettings(BaseModel):
     @property
     def resolved(self) -> dict[str, Any]:
         return {**self.static_defaults, **self.extracted, **self.user_overrides}
+
+
+class AttachmentOut(BaseModel):
+    id: str
+    type: Literal["image", "audio"]
+    url: str
+    filename: str
+    content_type: str
+    transcription: str | None = None
+    transcription_status: Literal["pending", "complete", "unavailable"] | None = None
+
+
+class WhyNodeOut(BaseModel):
+    id: str
+    branch_path: str
+    depth: int
+    hypothesis: str
+    gemba_result: Literal["OK", "NOK", "ROOT_CAUSE", "pending"]
+    gemba_notes: str
+    is_root_cause: bool
+    countermeasure: str
+    status: Literal["active", "closed", "suspended", "deleted"] | None = None
+    model_attribution: str | None = None
+    attachments: list[AttachmentOut] | None = None
+    conflict: bool = False

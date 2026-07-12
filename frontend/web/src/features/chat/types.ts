@@ -6,6 +6,16 @@ export type PendingHypothesis = {
   domain_context?: string
 }
 
+export type Attachment = {
+  id: string
+  type: 'image' | 'audio'
+  url: string
+  filename: string
+  content_type: string
+  transcription?: string
+  transcription_status?: 'pending' | 'complete' | 'unavailable'
+}
+
 export type WhyNode = {
   id: string
   branch_path: string
@@ -15,6 +25,10 @@ export type WhyNode = {
   gemba_notes: string
   is_root_cause: boolean
   countermeasure: string
+  status?: 'active' | 'closed' | 'suspended' | 'deleted'
+  model_attribution?: string
+  attachments?: Attachment[]
+  conflict?: boolean
 }
 
 export type ChatMessage =

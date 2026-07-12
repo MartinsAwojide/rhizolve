@@ -23,6 +23,7 @@ from api.quorum import router as quorum_router
 from api.stream import router as stream_router
 from api.tree_navigation import router as tree_navigation_router
 from api.users import router as users_router
+from api.why_tree import router as why_tree_router
 from core.config import REDIS_URL
 from core.db import make_engine, make_sessionmaker
 from core.memory import make_checkpointer
@@ -79,6 +80,7 @@ app.include_router(quorum_router, prefix="/api/v1/projects")
 app.include_router(five_whys_advance_router, prefix="/api/v1/projects")
 app.include_router(conflicts_router, prefix="/api/v1/projects")
 app.include_router(dashboard_router, prefix="/api/v1/dashboard")
+app.include_router(why_tree_router, prefix="/api/v1/projects")
 
 
 @app.get("/api/v1/health")

@@ -3,6 +3,13 @@ import { afterAll, afterEach, beforeAll } from 'vitest'
 import '@testing-library/jest-dom/vitest'
 import { server } from './msw/server'
 
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver = globalThis.ResizeObserver ?? ResizeObserverStub
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   server.resetHandlers()

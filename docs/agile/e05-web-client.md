@@ -338,6 +338,33 @@ composition, no new dependency or cross-service contract change.
 - T03: Write `src/features/investigation/WhyNode.tsx` with status-based styling
 - T04: Wire node click to `chatRef.scrollToMessage(node_id)`
 
+**Status: done.** T01-T04 were frontend-only, but no data source existed
+for them to consume — see ADR-021 for the full gap analysis and decision.
+Three additions beyond the literal task list, all confirmed with the user
+first:
+1. **New `GET /api/v1/projects/{project_id}/investigations/{investigation_id}/tree`**
+   endpoint (`backend/api/why_tree.py`) — `FiveWhysAgent._status()` read
+   `why_nodes` internally but nothing exposed it; added `agent.get_tree()`
+   plus `WhyNodeOut`/`AttachmentOut` schemas (`backend/agent/schemas.py`)
+   with a derived `conflict: bool` joined against flagged `Conflict` rows.
+2. **Enriched the `node_update` SSE payload** with an `updated_nodes` diff
+   (`five_whys_agent.py`'s `_run_and_publish`) — LangGraph's
+   `stream_mode="updates"` chunk already carries the partial `why_nodes`
+   a graph node returned, published as-is instead of forcing a refetch.
+3. **DESIGN.md's full 6-state `nodeStatus` vocabulary** (active/confirmed/
+   ruledOut/rootCause/suspended/conflict) implemented via
+   `src/features/investigation/nodeStyle.ts`'s `deriveNodeStatus`, not
+   just the AC's literal 4-state description — precedence: conflict >
+   rootCause > suspended > confirmed > ruledOut > active.
+
+`WhyTree`/`WhyNode`/`useWhyTree`/`layout.ts` all built TDD. T04's click
+wiring stops at an `onNodeClick?: (nodeId: string) => void` prop —
+`App.tsx`/`InvestigationPanel` are still stubs (consistent with US-33/34),
+so the actual `chatRef.scrollToMessage` composition is deferred to
+whichever story wires the full investigation page. 101/101
+`pnpm vitest run` green (backend `uv run pytest` also green), `pnpm lint`
+and `pnpm tsc --noEmit` clean. See ADR-021 for the full decision record.
+
 ---
 
 ### US-36 — `/btw` opens independent parallel thread

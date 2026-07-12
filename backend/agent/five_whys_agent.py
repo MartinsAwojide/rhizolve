@@ -72,11 +72,17 @@ class FiveWhysAgent:
         ):
             if self._pubsub is None:
                 continue
-            for node_name in chunk:
+            for node_name, partial in chunk.items():
+                payload: dict[str, Any] = {
+                    "node": node_name,
+                    "investigation_id": investigation_id,
+                }
+                if isinstance(partial, dict) and "why_nodes" in partial:
+                    payload["updated_nodes"] = partial["why_nodes"]
                 await self._pubsub.publish(
                     make_channel(project_id, investigation_id),
                     "node_update",
-                    {"node": node_name, "investigation_id": investigation_id},
+                    payload,
                 )
 
     async def start_investigation(
@@ -256,6 +262,11 @@ class FiveWhysAgent:
             as_node="root_cause_validator",
         )
         return await self._status(investigation_id)
+
+    async def get_tree(self, investigation_id: str) -> list[WhyNode]:
+        config = self._config(investigation_id)
+        snapshot = await self.graph.aget_state(config)
+        return snapshot.values.get("why_nodes", [])
 
     async def inject_context(self, thread_id: str, context: str) -> None:
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}

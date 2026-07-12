@@ -111,3 +111,31 @@ async def test_submit_gemba_publishes_node_update_and_preserves_status(
     assert status["status"] == "awaiting_gemba"
     assert len(events) >= 1
     assert all(e["type"] == "node_update" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_submit_gemba_node_update_carries_updated_nodes_diff(
+    agent, redis_client
+):
+    result = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+        project_id="proj-stream-3",
+    )
+    investigation_id = result["investigation_id"]
+    channel = make_channel("proj-stream-3", investigation_id)
+    pubsub = RedisPubSub(redis_client)
+
+    reader = asyncio.create_task(
+        _collect_until(pubsub, channel, at_least=1, timeout=3.0)
+    )
+    await asyncio.sleep(0.2)
+
+    await agent.submit_gemba(investigation_id, "NOK", notes="seal cracked")
+
+    events = await reader
+    events_with_nodes = [e for e in events if "updated_nodes" in e["payload"]]
+    assert events_with_nodes, "expected at least one node_update to carry updated_nodes"
+    updated = events_with_nodes[0]["payload"]["updated_nodes"]
+    assert any(n["branch_path"] == "root.h1" for n in updated)

@@ -105,6 +105,39 @@ async def test_submit_gemba_advances_past_dispatch_and_records_result(agent):
 
 
 @pytest.mark.asyncio
+async def test_get_tree_returns_current_why_nodes(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+    await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+
+    tree = await agent.get_tree(investigation_id)
+
+    assert [n["branch_path"] for n in tree] == ["root.h1"]
+    assert tree[0]["hypothesis"] == "seal wear on the fill valve"
+
+
+@pytest.mark.asyncio
+async def test_get_tree_reflects_gemba_result_after_submission(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+
+    await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+
+    tree = await agent.get_tree(investigation_id)
+    node = next(n for n in tree if n["branch_path"] == "root.h1")
+    assert node["gemba_result"] == "NOK"
+    assert node["gemba_notes"] == "seal cracked"
+
+
+@pytest.mark.asyncio
 async def test_submit_gemba_with_attachments_persists_on_node(agent):
     started = await agent.start_investigation(
         phenomenon="Glue overflowed",
