@@ -278,6 +278,9 @@ class FiveWhysAgent:
             config, {"domain_context": appended}, as_node="intake"
         )
 
+    async def get_status(self, investigation_id: str) -> dict[str, Any]:
+        return await self._status(investigation_id)
+
     async def _status(self, investigation_id: str) -> dict[str, Any]:
         config = self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
@@ -286,6 +289,8 @@ class FiveWhysAgent:
                 "investigation_id": investigation_id,
                 "status": "complete",
                 "interrupt_type": None,
+                "pending_hypotheses": [],
+                "node": None,
             }
         else:
             interrupt_type = _INTERRUPT_TYPES.get(snapshot.next[0])
@@ -293,6 +298,16 @@ class FiveWhysAgent:
                 "investigation_id": investigation_id,
                 "status": "awaiting_gemba",
                 "interrupt_type": interrupt_type,
+                "pending_hypotheses": (
+                    snapshot.values.get("pending_hypotheses", [])
+                    if interrupt_type == "hypothesis_review"
+                    else []
+                ),
+                "node": (
+                    _find_active_node(snapshot)
+                    if interrupt_type != "hypothesis_review"
+                    else None
+                ),
             }
 
         if self._db_sessionmaker is not None:

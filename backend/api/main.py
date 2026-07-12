@@ -13,6 +13,7 @@ from api.dashboard import router as dashboard_router
 from api.five_whys_advance import router as five_whys_advance_router
 from api.gemba import router as gemba_router
 from api.invites import router as invites_router
+from api.investigation_status import router as investigation_status_router
 from api.investigations import router as investigations_router
 from api.organisations import router as organisations_router
 from api.presence import router as presence_router
@@ -81,6 +82,7 @@ app.include_router(five_whys_advance_router, prefix="/api/v1/projects")
 app.include_router(conflicts_router, prefix="/api/v1/projects")
 app.include_router(dashboard_router, prefix="/api/v1/dashboard")
 app.include_router(why_tree_router, prefix="/api/v1/projects")
+app.include_router(investigation_status_router, prefix="/api/v1/projects")
 
 
 @app.get("/api/v1/health")

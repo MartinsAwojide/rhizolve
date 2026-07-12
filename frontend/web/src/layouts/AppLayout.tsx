@@ -6,9 +6,18 @@ import { InvestigationPanel } from '../components/InvestigationPanel/Investigati
 interface AppLayoutProps {
   children?: ReactNode
   hasActiveInvestigation?: boolean
+  projectId?: string
+  investigationId?: string | null
+  onNodeClick?: (nodeId: string) => void
 }
 
-export function AppLayout({ children, hasActiveInvestigation = true }: AppLayoutProps) {
+export function AppLayout({
+  children,
+  hasActiveInvestigation = true,
+  projectId = '',
+  investigationId = null,
+  onNodeClick,
+}: AppLayoutProps) {
   const isAtLeastTablet = useMediaQuery('(min-width: 768px)')
   const isDesktop = useMediaQuery('(min-width: 1280px)')
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false)
@@ -56,7 +65,11 @@ export function AppLayout({ children, hasActiveInvestigation = true }: AppLayout
         hidden={!investigationPanelVisible}
         className="w-[400px] overflow-y-auto bg-surface-2"
       >
-        <InvestigationPanel />
+        <InvestigationPanel
+          projectId={projectId}
+          investigationId={investigationId}
+          onNodeClick={onNodeClick}
+        />
       </aside>
     </div>
   )

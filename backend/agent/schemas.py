@@ -25,6 +25,7 @@ class ChatResponse(BaseModel):
     ephemeral: bool = False
     mode_switch_card: ModeSwitchCard | None = None
     active_mode: str = "shallow"
+    investigation_id: str | None = None
 
 
 class ExtractionOutput(BaseModel):
@@ -75,3 +76,19 @@ class WhyNodeOut(BaseModel):
     model_attribution: str | None = None
     attachments: list[AttachmentOut] | None = None
     conflict: bool = False
+
+
+class InvestigationStatusOut(BaseModel):
+    investigation_id: str
+    status: Literal["awaiting_gemba", "complete"]
+    interrupt_type: (
+        Literal[
+            "hypothesis_review",
+            "gemba_result_review",
+            "validator_review",
+            "countermeasure_review",
+        ]
+        | None
+    )
+    pending_hypotheses: list[dict[str, Any]]
+    node: WhyNodeOut | None

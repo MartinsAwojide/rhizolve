@@ -105,6 +105,39 @@ async def test_submit_gemba_advances_past_dispatch_and_records_result(agent):
 
 
 @pytest.mark.asyncio
+async def test_status_includes_pending_hypotheses_on_hypothesis_review(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+
+    status = await agent.get_status(started["investigation_id"])
+
+    assert status["interrupt_type"] == "hypothesis_review"
+    assert status["pending_hypotheses"][0]["hypothesis"] == (
+        "seal wear on the fill valve"
+    )
+
+
+@pytest.mark.asyncio
+async def test_status_includes_node_on_validator_review(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+    await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+
+    status = await agent.get_status(investigation_id)
+
+    assert status["interrupt_type"] == "validator_review"
+    assert status["node"]["branch_path"] == "root.h1"
+    assert status["pending_hypotheses"] == []
+
+
+@pytest.mark.asyncio
 async def test_get_tree_returns_current_why_nodes(agent):
     started = await agent.start_investigation(
         phenomenon="Glue overflowed",

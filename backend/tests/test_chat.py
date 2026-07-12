@@ -1,5 +1,36 @@
 import pytest
 
+from agent.five_whys_agent import FiveWhysAgent
+from api.main import app
+from core.memory import make_checkpointer
+
+
+async def _pinned_why_generator(state):
+    return {
+        "pending_hypotheses": [
+            {
+                "hypothesis": "seal wear on the fill valve",
+                "branch_path": f"{state['current_branch_path']}.h1",
+                "depth": state["current_depth"],
+                "gemba_instructions": "inspect fill valve seal",
+            }
+        ]
+    }
+
+
+@pytest.fixture
+async def chat_investigation_env(monkeypatch):
+    monkeypatch.setattr("agent.graph.why_generator", _pinned_why_generator)
+    checkpointer, ctx = await make_checkpointer()
+    original_agent = app.state.five_whys_agent
+    agent = FiveWhysAgent(checkpointer)
+    app.state.five_whys_agent = agent
+    try:
+        yield agent
+    finally:
+        app.state.five_whys_agent = original_agent
+        await ctx.__aexit__(None, None, None)
+
 
 @pytest.mark.asyncio
 async def test_shallow_does_not_invoke_graph(async_client):
@@ -121,3 +152,42 @@ async def test_active_mode_echoes_shallow_mode(async_client):
         "/api/v1/chat", json={"message": "What is 5 Whys?", "mode": "shallow"}
     )
     assert r.json()["active_mode"] == "shallow"
+
+
+@pytest.mark.asyncio
+async def test_start_investigation_with_project_id_creates_real_investigation(
+    async_client, chat_investigation_env, mock_llm
+):
+    r = await async_client.post(
+        "/api/v1/chat",
+        json={
+            "message": "Glue tank overflowing on line 3",
+            "mode": "deep",
+            "action": "start_investigation",
+            "project_id": "proj-chat-1",
+        },
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["graph_invoked"] is True
+    assert body["investigation_id"]
+
+    tree = await chat_investigation_env.get_tree(body["investigation_id"])
+    assert tree == [] or isinstance(tree, list)
+
+
+@pytest.mark.asyncio
+async def test_start_investigation_without_project_id_keeps_stub_behavior(
+    async_client,
+):
+    r = await async_client.post(
+        "/api/v1/chat",
+        json={
+            "message": "Trucks keep hitting the loading-bay walls",
+            "mode": "deep",
+            "action": "start_investigation",
+        },
+    )
+    body = r.json()
+    assert body["graph_invoked"] is True
+    assert body.get("investigation_id") is None

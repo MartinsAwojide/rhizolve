@@ -112,6 +112,61 @@ async def test_project_status_is_active_with_pending_investigation(authed_client
 
 
 @pytest.mark.asyncio
+async def test_active_investigation_id_is_null_with_no_investigations(authed_client):
+    r = await authed_client.post(
+        "/api/v1/projects", json={"name": "Test", "visibility": "private"}
+    )
+    assert r.json()["active_investigation_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_active_investigation_id_matches_non_complete_investigation(
+    authed_client,
+):
+    r = await authed_client.post(
+        "/api/v1/projects", json={"name": "Test", "visibility": "private"}
+    )
+    project_id = r.json()["id"]
+    investigation_id = f"inv-{uuid.uuid4()}"
+
+    async with app.state.db_sessionmaker() as session:
+        session.add(
+            Investigation(
+                id=investigation_id,
+                project_id=project_id,
+                status=InvestigationStatus.AWAITING_GEMBA,
+            )
+        )
+        await session.commit()
+
+    r2 = await authed_client.get("/api/v1/projects")
+    project = next(p for p in r2.json() if p["id"] == project_id)
+    assert project["active_investigation_id"] == investigation_id
+
+
+@pytest.mark.asyncio
+async def test_active_investigation_id_is_null_when_all_complete(authed_client):
+    r = await authed_client.post(
+        "/api/v1/projects", json={"name": "Test", "visibility": "private"}
+    )
+    project_id = r.json()["id"]
+
+    async with app.state.db_sessionmaker() as session:
+        session.add(
+            Investigation(
+                id=f"inv-{uuid.uuid4()}",
+                project_id=project_id,
+                status=InvestigationStatus.COMPLETE,
+            )
+        )
+        await session.commit()
+
+    r2 = await authed_client.get("/api/v1/projects")
+    project = next(p for p in r2.json() if p["id"] == project_id)
+    assert project["active_investigation_id"] is None
+
+
+@pytest.mark.asyncio
 async def test_project_status_is_closed_when_all_investigations_complete(
     authed_client,
 ):

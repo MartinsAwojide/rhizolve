@@ -49,6 +49,7 @@ class ProjectOut(BaseModel):
     owner_id: int
     status: ProjectStatus
     active_investigation_count: int
+    active_investigation_id: str | None
     member_count: int
 
 
@@ -61,7 +62,12 @@ class ProjectMemberOut(BaseModel):
 
 
 def _project_out(
-    project: Project, *, status: ProjectStatus, active_count: int, member_count: int
+    project: Project,
+    *,
+    status: ProjectStatus,
+    active_count: int,
+    active_investigation_id: str | None = None,
+    member_count: int,
 ) -> ProjectOut:
     return ProjectOut(
         id=project.id,
@@ -74,6 +80,7 @@ def _project_out(
         owner_id=project.owner_id,
         status=status,
         active_investigation_count=active_count,
+        active_investigation_id=active_investigation_id,
         member_count=member_count,
     )
 
@@ -135,14 +142,17 @@ async def list_projects(
 
     inv_rows = (
         await session.execute(
-            select(Investigation.project_id, Investigation.status).where(
-                Investigation.project_id.in_(project_ids)
-            )
+            select(
+                Investigation.project_id, Investigation.status, Investigation.id
+            ).where(Investigation.project_id.in_(project_ids))
         )
     ).all()
     statuses_by_project: dict[str, list[InvestigationStatus]] = {}
-    for project_id, inv_status in inv_rows:
+    active_investigation_by_project: dict[str, str] = {}
+    for project_id, inv_status, investigation_id in inv_rows:
         statuses_by_project.setdefault(project_id, []).append(inv_status)
+        if inv_status != InvestigationStatus.COMPLETE:
+            active_investigation_by_project.setdefault(project_id, investigation_id)
 
     member_count_rows = (
         await session.execute(
@@ -168,6 +178,7 @@ async def list_projects(
                 p,
                 status=status,
                 active_count=active_count,
+                active_investigation_id=active_investigation_by_project.get(p.id),
                 member_count=member_counts.get(p.id, 0),
             )
         )
