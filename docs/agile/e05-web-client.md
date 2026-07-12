@@ -268,6 +268,28 @@ it('renders hypothesis card for hypothesis_review interrupt', () => {
 })
 ```
 
+**Status: done.** Presentational-only slice, matching the story's given test —
+no backend chat-message history exists yet (`POST /api/v1/chat` is a
+stateless passthrough), so `ChatThread` takes a `messages` prop directly;
+wiring it to real backend calls via `useConversation` is US-34/35's concern.
+Three gaps surfaced during planning and were resolved before implementation:
+1. No shared UI primitives existed — built minimal `src/components/ui/{Card,Button}.tsx`
+   matching `AGENTS.md`'s documented card pattern.
+2. No markdown-rendering library was installed — added `react-markdown`
+   (new dependency) for `ChatBubble`.
+3. The backend's `root_cause_validator` (`backend/agent/graph.py:269-303`)
+   never persists a confidence score, only `is_root_cause: bool` — so
+   `ValidatorReviewCard` takes `confidence?: number` as optional and
+   renders gracefully without it.
+
+All 5 cards + `ChatThread` + `ChatInput` built TDD (test-first, RED verified,
+GREEN verified). 60/60 `pnpm vitest run` green, `pnpm lint` and
+`pnpm tsc --noEmit` clean. No backend changes — no ADR needed (react-markdown
+is a routine, non-architectural dependency choice). Verification is
+presentational-only (component tests assert rendered markdown/roles); no
+live browser click-through was done since no backend wiring exists yet to
+exercise end-to-end.
+
 ---
 
 ### US-34 — Mode indicator subtle in chat input with manual override
