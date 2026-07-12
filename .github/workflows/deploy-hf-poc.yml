@@ -27,10 +27,21 @@ jobs:
       - name: Assemble deployable POC source
         run: ./scripts/hf-poc-assemble.sh
 
-      - uses: huggingface/hub-sync@v0.1.0
-        with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: ${{ vars.HF_SPACE_ID }}
-          hf_token: ${{ secrets.HF_TOKEN }}
-          space_sdk: docker
-          subdirectory: huggingface
+      - uses: astral-sh/setup-uv@v8
+
+      # huggingface/hub-sync@v0.1.0 always runs `hf repo create --exist-ok`
+      # before uploading, and HF's API validates SDK/hardware billing
+      # eligibility on that call even with --exist-ok — 402s for a
+      # non-PRO account regardless of the Space already existing. The
+      # Space is created manually (see huggingface/README.md prerequisites),
+      # so upload alone (no create call) is all this job needs.
+      - name: Upload to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          uvx hf upload "${{ vars.HF_SPACE_ID }}" huggingface \
+            --repo-type space \
+            --exclude=".git*" \
+            --exclude=".github*" \
+            --delete="*" \
+            --commit-message="Sync from GitHub"
