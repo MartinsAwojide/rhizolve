@@ -1,4 +1,6 @@
 .claude/logs/
+frontend/web/playwright-report/
+frontend/web/test-results/
 .venv/
 .pytest_cache/
 dist/
