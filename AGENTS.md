@@ -15,6 +15,12 @@ Nested `AGENTS.md` files take precedence for their own subtree. Read the nearest
 
 Before implementing any non-trivial change, ask clarifying questions Socratic-style — surface assumptions, tradeoffs, and alternatives, and make the user reason through the decision rather than just receiving a finished answer. Don't skip straight to code for architectural, scope, or design decisions.
 
+## Implementation workflow: plan first, then task by task
+
+Always draft a plan before starting implementation — even for a single user story. Use plan mode (research the story, surface gaps/decisions via Socratic questions, write the plan file, get it approved) before writing any code, not just for large or ambiguous work.
+
+Once a plan is approved, execute it **task by task, not user-story by user-story**: pick the plan's task list, work one task fully (TDD red/green, verify) before moving to the next, tracking progress with `TaskCreate`/`TaskUpdate`. Don't batch multiple tasks' code changes together before verifying any of them, and don't jump ahead to the next user story until the current story's tasks are all done, verified, and committed.
+
 ## Git: no co-author, no unrequested push
 
 Never add `Co-Authored-By: Claude` (or any AI co-author trailer) to commit messages. Never run `git push` unless the user explicitly asks for it in that turn — a prior push approval does not carry over.
