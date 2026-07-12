@@ -47,6 +47,27 @@ See `docs/product-brief.md` (the Hill), `docs/build-plan/sprint-map.md` (sequenc
 
 An epic's `## Spike` section(s) must be resolved before its first `US-xx` story is implemented — spikes exist to settle library/API/pricing questions that a story's design would otherwise guess at. If a spike hasn't been answered yet when picking up that epic's first story, resolve it first (per "Research must be current, not just remembered" below) and record the finding (in the spike section itself, and in an ADR if it drives an architectural decision) before writing any story code.
 
+## Clean code paradigms — apply where relevant, not as ritual
+
+These are defaults, not rules to force onto every diff — apply the ones relevant to what you're actually touching, skip the ones that aren't. Definitions below are Rhizolve-specific so "relevant" has a concrete anchor:
+
+- **DRY (Don't Repeat Yourself)** — one implementation, not copies drifting apart. E.g. `_project_out()` in `projects_crud.py` exists so `create_project`/`list_projects`/`update_project` don't each hand-build the response shape.
+- **SOLID**:
+  - *Single Responsibility* — a module has one reason to change. `FiveWhysAgent` owns graph orchestration; `RedisPubSub` owns pub/sub; don't fold unrelated concerns into either.
+  - *Open/Closed* — extend via new code, not by rewriting stable code's internals. Adding a new interrupt type should mean a new case in `_INTERRUPT_TYPES`, not restructuring `_status()`.
+  - *Liskov Substitution* — a more specific type must honor its base type's contract. Relevant wherever `AsyncRedisSaver`-compatible checkpointers or `APIRouter`-shaped routers are swapped (e.g. `huggingface/backend/main.py` reusing `backend/api/*` routers unchanged under `gr.Server`).
+  - *Interface Segregation* — don't force a caller to depend on props/params it doesn't use. E.g. card components (`GembaCheckCard`, `ValidatorReviewCard`) take only the fields they render, not the full `WhyNode`.
+  - *Dependency Inversion* — depend on the abstraction already in place (`app.state.five_whys_agent`, `useAuthFetch`) rather than reaching around it to a concrete client.
+- **KISS (Keep It Simple, Stupid)** — prefer the simplest solution that satisfies the story's AC. Don't add a state machine where a boolean suffices.
+- **YAGNI (You Aren't Gonna Need It)** — don't build for a future epic's hypothetical needs. E.g. `huggingface/backend/pyproject.toml` deliberately isn't auto-synced from `backend/pyproject.toml` — that generality wasn't needed for the POC.
+- **SoC (Separation of Concerns)** — distinct responsibilities in distinct places. Frontend: presentational components (`ChatBubble`, `WhyNode`) stay free of fetch logic; hooks (`useConversation`, `useWhyTree`) own data fetching. Backend: routers stay thin, business logic lives in `agent/`/`core/`.
+- **Law of Demeter ("don't talk to strangers")** — a unit talks to its immediate collaborators, not through them to their internals. A component should call `useConversation()`'s returned functions, not reach into `useConversation`'s internal refs or reimplement its fetch logic.
+- **Boy Scout Rule** — leave touched code cleaner than you found it, scoped to what you're already touching (not a license for drive-by rewrites elsewhere — see "don't add features/refactor beyond what the task requires" in the system prompt).
+- **Composition over inheritance** — this codebase has effectively no class inheritance hierarchies (React function components + hooks, FastAPI routers, Pydantic models); keep it that way — compose smaller pieces (hooks calling hooks, routers calling agent methods) rather than introducing base classes.
+- **PoLA (Principle of Least Astonishment)** — code should behave the way a reader familiar with the codebase's existing patterns would expect. E.g. a new endpoint should follow the existing `Depends(get_project_member)` auth pattern, not invent a new one, unless there's a stated reason.
+- **Fail fast** — surface errors near their source. E.g. `useAuthFetch` throws on a non-`ok` response instead of returning the error body as if it were data (a real bug fixed this session precisely because the opposite happened).
+- **Single source of truth** — one authoritative place per piece of data/logic. E.g. ADR-022's whole design (`huggingface/backend/` importing the real `agent/core/models/api` at build time instead of a duplicated copy) exists specifically to keep `backend/` as the only source of truth for business logic.
+
 ## UI work
 
 Follows `DESIGN.md` at repo root (Google Stitch spec — YAML front matter + prose). Run `npx @google/design.md lint DESIGN.md` after any edit to it.
