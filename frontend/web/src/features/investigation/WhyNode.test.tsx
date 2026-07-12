@@ -26,6 +26,9 @@ function renderNode(node: WhyNodeType) {
         isConnectable={false}
         zIndex={0}
         dragging={false}
+        draggable={false}
+        selectable={false}
+        deletable={false}
         positionAbsoluteX={0}
         positionAbsoluteY={0}
       />

@@ -21,6 +21,8 @@
 
 ## Spikes
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-00a — Design system selection**  
 Time-box: 1 day. **RESOLVED:** component system = **shadcn/ui** (unified `radix-ui` package, New York style — full React 19 + Tailwind v4 support confirmed, owns component source in-repo, ships MCP server + agent skills aligning with E10/Claude Code). Why-tree = **`@xyflow/react` + `d3-hierarchy`**. Dagre rejected (unmaintained per xyflow maintainer; its expand/collapse example is Pro-licensed). elkjs rejected (overkill for a strict single-root tree). Ant Design rejected (theming fights custom AA-tuned tokens). Documented in ADR-008 and DESIGN.md.
 
@@ -423,6 +425,50 @@ ADR (consuming an already-built, already-tested backend contract).
 - T03: Write `infra/smoke-test.sh`
 - T04: Configure HF Spaces secrets (REDIS_URL, OPENROUTER_API_KEY, SERPER_API_KEY, REPORT_SIGNING_KEY)
 - T05: GitHub Actions auto-deploy to HF Spaces on push to `main`
+
+**Status: done (revised scope — see ADR-022).** Mid-planning, research
+surfaced `gradio.Server` (published April 2026, after most training
+data — verified live against `gradio.app/guides/server-mode` and
+`huggingface.co/blog/introducing-gradio-server`): a FastAPI subclass
+that's fully `app.include_router()`-compatible, meaning the main app
+*could* migrate to it with a one-line change. The user explicitly chose
+**not** to migrate the main app — it stays plain FastAPI, untouched.
+Instead, a separate `huggingface/` folder at the repo root hosts a public
+POC deployment on `gr.Server`, reusing the real `backend/`'s routers and
+business logic without duplicating it in git (a CI/local script copies
+`agent/core/models/api` into `huggingface/backend/` on disk only,
+gitignored — see `scripts/hf-poc-assemble.sh`). This also resolved the
+AC's `/mcp`/`/gradio` route mentions: neither exists yet (E10/MCP isn't
+built; no Gradio pilot UI was ever built despite ADR-001 planning one),
+so the POC serves React (`/`) + API (`/api/v1/*`) only, matching what's
+actually implemented.
+
+Built: `huggingface/{README.md,Dockerfile,backend/{main.py,pyproject.toml},frontend/README.md}`,
+`.github/workflows/deploy-hf-poc.yml`, `scripts/hf-poc-assemble.sh`.
+Verified end-to-end locally: `docker build -f huggingface/Dockerfile huggingface`
+succeeds, container boots against real Redis+Postgres (own Docker
+network, not mocked), `GET /api/v1/health` returns `{"status":"ok","redis":"connected"}`,
+`GET /` serves the built React app — all within the story's cold-start
+expectation. Two real bugs found and fixed during this local
+verification (not caught by any prior test): a UID-1000 permission
+ordering bug (`uv sync` must run as the non-root `user`, and `WORKDIR`
+needs an explicit `chown` since `useradd -m` doesn't retroactively own a
+directory created by a later `WORKDIR` instruction), and a Docker `COPY`
+semantics bug (`COPY dir1 dir2 dest/` copies each source's *contents*
+into `dest/`, not the source directories themselves — silently flattened
+`agent/`, `core/`, `models/`, `api/` into one directory, breaking every
+import). Also fixed a pre-existing `WhyNode.tsx` (US-35) typing bug this
+build surfaced: its `NodeProps` generic used an ad hoc
+`{ data } & Record<string, unknown>` shape instead of a proper
+`Node<WhyNodeData, 'whyNode'>`, which `tsc -b` (production build mode)
+catches but `tsc --noEmit` (used in this session's prior verification
+passes) does not — a real gap in how thoroughly `--noEmit` checks build
+output.
+
+Deploying an actual live URL requires the user to create the HF Space
+and add `HF_TOKEN`/app secrets (documented in `huggingface/README.md`) —
+not something achievable without HF account access. See ADR-022 for the
+full decision record.
 
 ### US-38 — Pilot team completes five investigations with feedback
 

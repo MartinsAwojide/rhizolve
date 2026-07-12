@@ -10,3 +10,8 @@ __pycache__/
 .env
 backend/investigations/
 scripts/.dev-logs/
+huggingface/backend/agent/
+huggingface/backend/core/
+huggingface/backend/models/
+huggingface/backend/api/
+huggingface/frontend/web/

@@ -1,10 +1,12 @@
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { deriveNodeStatus } from './nodeStyle'
 import type { WhyNode as WhyNodeType } from '../chat/types'
 
 type WhyNodeData = {
   node: WhyNodeType
 }
+
+export type WhyNodeFlowNode = Node<WhyNodeData, 'whyNode'>
 
 const STATUS_CLASS: Record<string, string> = {
   active: 'border-node-active bg-node-active/10',
@@ -15,8 +17,8 @@ const STATUS_CLASS: Record<string, string> = {
   conflict: 'border-node-conflict',
 }
 
-export function WhyNode({ data }: NodeProps<{ data: WhyNodeData } & Record<string, unknown>>) {
-  const { node } = data as WhyNodeData
+export function WhyNode({ data }: NodeProps<WhyNodeFlowNode>) {
+  const { node } = data
   const status = deriveNodeStatus(node)
 
   return (

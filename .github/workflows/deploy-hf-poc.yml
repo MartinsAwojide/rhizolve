@@ -1,0 +1,36 @@
+name: Deploy HF POC
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "huggingface/**"
+      - "backend/agent/**"
+      - "backend/core/**"
+      - "backend/models/**"
+      - "backend/api/**"
+      - "frontend/web/**"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Copy the real backend/frontend source into huggingface/ on disk
+      # only (never committed — see .gitignore). Needed because
+      # huggingface/hub-sync's `subdirectory` sync only uploads this
+      # folder's contents to the Space; huggingface/backend/main.py
+      # imports agent/core/models/api as siblings, and the Dockerfile's
+      # Node stage builds frontend/web. See ADR-022.
+      - name: Assemble deployable POC source
+        run: ./scripts/hf-poc-assemble.sh
+
+      - uses: huggingface/hub-sync@v0.1.0
+        with:
+          github_repo_id: ${{ github.repository }}
+          huggingface_repo_id: ${{ vars.HF_SPACE_ID }}
+          hf_token: ${{ secrets.HF_TOKEN }}
+          space_sdk: docker
+          subdirectory: huggingface
