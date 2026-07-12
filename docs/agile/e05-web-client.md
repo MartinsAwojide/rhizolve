@@ -538,6 +538,30 @@ investigation through the web UI at all.
   `HF_TOKEN`/app secrets per `huggingface/README.md` — manual,
   operational, requires HF account access; not achievable in code
 
+**Status (2026-07-13):** T01-T10 done, TDD-verified, all green
+(backend 292/292 pytest, frontend 129/129 vitest, `tsc -b` clean, lint
+clean, Playwright E2E 2/2). Scope grew mid-implementation beyond the
+original AC list: composing `App.tsx` around `ChatThread`'s review
+cards (wired in an earlier pass) surfaced that nothing actually
+constructed the `interrupt`-type `ChatMessage`s those cards render — no
+endpoint exposed `pending_hypotheses`/the awaiting-review `WhyNode`, so
+the cards were reachable in isolation but never in the composed app.
+Added a `GET .../status` endpoint (`FiveWhysAgent.get_status`,
+`InvestigationStatusOut`) and `useConversation` polling after
+`startInvestigation`/each review submit to close that gap — without it,
+this story would have repeated its own root problem one layer deeper.
+
+T07's E2E coverage is intentionally scoped down: it proves the composed
+route tree (`App.tsx`, `ProjectCreatePage`, `ProtectedRoute`) builds and
+serves with no placeholder text and no crash, using the real Vite dev
+server — but stops at the `/login` redirect, since asserting the real
+chat/why-tree render authenticated needs Clerk test-mode credentials
+this session doesn't have. T11 remains manual, unchanged from US-37.
+No full authenticated manual walkthrough (sign in → create project →
+start investigation → submit review → see tree update → click-to-scroll)
+was performed this session for the same reason; flagging as open before
+US-38 pilot testing begins.
+
 ---
 
 ### US-38 — Pilot team completes five investigations with feedback
