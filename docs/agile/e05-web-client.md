@@ -470,6 +470,76 @@ and add `HF_TOKEN`/app secrets (documented in `huggingface/README.md`) —
 not something achievable without HF account access. See ADR-022 for the
 full decision record.
 
+### US-38a — Investigation page composed from existing chat + why-tree components
+
+**As a** user, **I want** to actually open a project and run a real
+investigation through the UI, **so that** the pilot (US-38) has
+something real to test.
+
+**Added retroactively 2026-07-12** — not in the original SP10 plan.
+US-33 through US-36 each built a real, tested component
+(`ChatThread`, `ChatInput`, `BtwThread`, `useConversation`, `WhyTree`,
+`useWhyTree`) but deliberately deferred wiring it into a real page —
+every one of those stories' status notes says some version of "deferred
+to whichever future story composes the full investigation page." That
+story was never actually scheduled. As of US-37, `App.tsx` (rendered at
+`/projects/:id`) is still literally `<div>Chat thread placeholder</div>`
+and `InvestigationPanel`'s why-tree tab is still `'Why-tree graph
+placeholder'` text (confirmed via `grep -rn "placeholder" frontend/web/src`
+— these are the only two placeholder strings left in the app). US-38's
+phase gate ("5 distinct investigations from pilot team") is unpassable
+without this — there is currently no way to start or run an
+investigation through the web UI at all.
+
+**Acceptance criteria:**
+- `App.tsx` at `/projects/:id` renders real `useConversation`-backed
+  `ChatThread`/`ChatInput` (and `BtwThread` when `btwOpen`), scoped to
+  the route's `project_id`
+- `InvestigationPanel`'s why-tree tab renders real `WhyTree`, scoped to
+  the same `project_id`/`investigation_id`
+- If no investigation exists yet for the project, the page offers a way
+  to start one (calls `FiveWhysAgent.start_investigation` via the chat
+  endpoint's `action: "start_investigation"`) before falling back to
+  chat/tree
+- Clicking a why-tree node scrolls the chat thread to the corresponding
+  message (the click-to-scroll wiring every prior story since US-35
+  deferred)
+
+**Tasks:**
+- T01: Wire route params (`project_id`, and an `investigation_id` once
+  one exists) into `useConversation`/`useWhyTree` inside `App.tsx`
+- T02: Replace `App.tsx`'s placeholder with the composed chat layout
+- T03: Replace `InvestigationPanel`'s why-tree placeholder with `WhyTree`
+- T04: Wire `WhyTree`'s `onNodeClick` to scroll `ChatThread` to the
+  matching message (`data-node-id` attributes + `scrollIntoView`)
+- T05: Handle the "no investigation started yet" state
+- T06: Build a real "New project" creation flow (dedicated form/page
+  calling `POST /api/v1/projects`), replacing the dashed "New project"
+  card's current fall-through to `/projects/new` → `/projects/:id` with
+  `id="new"` (gap documented in ADR-020, never scheduled until now)
+- T07: Add an E2E/browser smoke-test layer (e.g. Playwright) covering
+  the real `/projects/:id` investigation flow — the App.tsx composition
+  gap this story fixes existed across four full stories (US-33→36)
+  specifically because no test walks the actual route; a smoke test
+  here should assert the page renders real chat/tree, not placeholder
+  text, so this class of gap can't recur silently
+- T08: Add a `postgres` service to `infra/compose.yml` — currently
+  absent, so `docker compose up` directly (rather than
+  `scripts/dev-up.sh`) silently breaks anything needing `DATABASE_URL`
+- T09: Reconcile the SP-11 spike vs ADR-015 — ADR-015 answers a
+  narrower, earlier question (driver-reset audit log) than SP-11 asks
+  (ISO 9001-compliant audit log for E08/US-58); amend ADR-015 or note
+  the mismatch explicitly so E08 doesn't get built assuming it's settled
+- T10: Close the SP-04 spike loop — document in E04's spike section
+  that SendGrid shipped instead of either candidate the spike named
+  (Resend/Postmark), with the actual reason, so the spike record matches
+  reality
+- T11: Create the actual Hugging Face Space and configure
+  `HF_TOKEN`/app secrets per `huggingface/README.md` — manual,
+  operational, requires HF account access; not achievable in code
+
+---
+
 ### US-38 — Pilot team completes five investigations with feedback
 
-**Phase gate before SP15:** 5 distinct investigations from pilot team, ≥2 domains, written feedback from each tester, 0 blocking bugs open.
+**Phase gate before SP15:** 5 distinct investigations from pilot team, ≥2 domains, written feedback from each tester, 0 blocking bugs open. Depends on US-38a — a pilot tester needs a real, working investigation UI to test.
