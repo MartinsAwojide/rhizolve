@@ -10,6 +10,7 @@ from core.db import Base
 from models import (  # noqa: F401  (register with Base.metadata)
     audit_log,
     conflict,
+    investigation,
     organisation,
     project,
     project_invitation,

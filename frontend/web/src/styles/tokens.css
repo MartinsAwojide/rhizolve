@@ -23,6 +23,10 @@
   --color-node-suspended: #378ADD;
   --color-node-conflict: #BA7517;
 
+  --color-project-status-active: #D85A30;
+  --color-project-status-closed: #888780;
+  --color-project-status-draft: #854F0B;
+
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
@@ -55,6 +59,10 @@
     --color-node-root-cause: #5DCAA5;
     --color-node-suspended: #85B7EB;
     --color-node-conflict: #EF9F27;
+
+    --color-project-status-active: #F0997B;
+    --color-project-status-closed: #B4B2A9;
+    --color-project-status-draft: #EF9F27;
   }
 }
 
@@ -78,6 +86,10 @@
   --color-node-root-cause: #5DCAA5;
   --color-node-suspended: #85B7EB;
   --color-node-conflict: #EF9F27;
+
+  --color-project-status-active: #F0997B;
+  --color-project-status-closed: #B4B2A9;
+  --color-project-status-draft: #EF9F27;
 }
 
 [data-theme='light'] {
@@ -100,4 +112,8 @@
   --color-node-root-cause: #0F6E56;
   --color-node-suspended: #378ADD;
   --color-node-conflict: #BA7517;
+
+  --color-project-status-active: #D85A30;
+  --color-project-status-closed: #888780;
+  --color-project-status-draft: #854F0B;
 }

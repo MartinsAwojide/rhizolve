@@ -1,13 +1,14 @@
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.middleware.rbac import require_project_role
 from core.auth import get_current_user
 from core.db import get_db_session
+from models.investigation import Investigation, InvestigationStatus
 from models.organisation import Organisation
 from models.project import Project, Visibility
 from models.project_member import ProjectMember, Role
@@ -15,10 +16,13 @@ from models.user import User
 
 router = APIRouter()
 
+ProjectStatus = Literal["active", "closed", "draft"]
+
 
 class ProjectCreate(BaseModel):
     name: str
     domain: str | None = None
+    description: str | None = None
     visibility: Visibility
     compliance_standards: list[str] = []
     maturity_level: int | None = None
@@ -27,6 +31,7 @@ class ProjectCreate(BaseModel):
 class ProjectUpdate(BaseModel):
     name: str | None = None
     domain: str | None = None
+    description: str | None = None
     visibility: Visibility | None = None
     compliance_standards: list[str] | None = None
 
@@ -37,10 +42,14 @@ class ProjectOut(BaseModel):
     id: str
     name: str
     domain: str | None
+    description: str | None
     visibility: Visibility
     compliance_standards: list[str]
     maturity_level: int
     owner_id: int
+    status: ProjectStatus
+    active_investigation_count: int
+    member_count: int
 
 
 class ProjectMemberOut(BaseModel):
@@ -49,6 +58,24 @@ class ProjectMemberOut(BaseModel):
     user_id: int
     role: Role
     status: str
+
+
+def _project_out(
+    project: Project, *, status: ProjectStatus, active_count: int, member_count: int
+) -> ProjectOut:
+    return ProjectOut(
+        id=project.id,
+        name=project.name,
+        domain=project.domain,
+        description=project.description,
+        visibility=project.visibility,
+        compliance_standards=project.compliance_standards,
+        maturity_level=project.maturity_level,
+        owner_id=project.owner_id,
+        status=status,
+        active_investigation_count=active_count,
+        member_count=member_count,
+    )
 
 
 @router.post("")
@@ -68,6 +95,7 @@ async def create_project(
     project = Project(
         name=payload.name,
         domain=payload.domain,
+        description=payload.description,
         visibility=payload.visibility,
         compliance_standards=payload.compliance_standards,
         maturity_level=maturity_level,
@@ -87,7 +115,7 @@ async def create_project(
     )
     await session.commit()
     await session.refresh(project)
-    return ProjectOut.model_validate(project)
+    return _project_out(project, status="draft", active_count=0, member_count=1)
 
 
 @router.get("")
@@ -100,7 +128,50 @@ async def list_projects(
         .join(ProjectMember, ProjectMember.project_id == Project.id)
         .where(ProjectMember.user_id == user.id)
     )
-    return [ProjectOut.model_validate(p) for p in result.scalars().all()]
+    projects = result.scalars().all()
+    project_ids = [p.id for p in projects]
+    if not project_ids:
+        return []
+
+    inv_rows = (
+        await session.execute(
+            select(Investigation.project_id, Investigation.status).where(
+                Investigation.project_id.in_(project_ids)
+            )
+        )
+    ).all()
+    statuses_by_project: dict[str, list[InvestigationStatus]] = {}
+    for project_id, inv_status in inv_rows:
+        statuses_by_project.setdefault(project_id, []).append(inv_status)
+
+    member_count_rows = (
+        await session.execute(
+            select(ProjectMember.project_id, func.count())
+            .where(ProjectMember.project_id.in_(project_ids))
+            .group_by(ProjectMember.project_id)
+        )
+    ).all()
+    member_counts: dict[str, int] = {row[0]: row[1] for row in member_count_rows}
+
+    out = []
+    for p in projects:
+        statuses = statuses_by_project.get(p.id, [])
+        active_count = sum(1 for s in statuses if s != InvestigationStatus.COMPLETE)
+        if not statuses:
+            status: ProjectStatus = "draft"
+        elif active_count > 0:
+            status = "active"
+        else:
+            status = "closed"
+        out.append(
+            _project_out(
+                p,
+                status=status,
+                active_count=active_count,
+                member_count=member_counts.get(p.id, 0),
+            )
+        )
+    return out
 
 
 @router.patch("/{project_id}")
@@ -120,7 +191,31 @@ async def update_project(
         setattr(project, field, value)
     await session.commit()
     await session.refresh(project)
-    return ProjectOut.model_validate(project)
+
+    statuses = (
+        (
+            await session.execute(
+                select(Investigation.status).where(
+                    Investigation.project_id == project_id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    active_count = sum(1 for s in statuses if s != InvestigationStatus.COMPLETE)
+    if not statuses:
+        status: ProjectStatus = "draft"
+    elif active_count > 0:
+        status = "active"
+    else:
+        status = "closed"
+    member_count = await session.scalar(
+        select(func.count()).where(ProjectMember.project_id == project_id)
+    )
+    return _project_out(
+        project, status=status, active_count=active_count, member_count=member_count or 0
+    )
 
 
 @router.get("/{project_id}/members")

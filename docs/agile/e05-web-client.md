@@ -224,6 +224,22 @@ async def test_dashboard_metrics_denied_for_external_member(authed_external_view
     assert r.status_code == 403
 ```
 
+**Status (2026-07-12):** Done (ADR-019, ADR-020). Investigation state had
+no Postgres row at all before this story (only markdown files + Redis
+checkpoints) — added a new `investigations` table synced from
+`FiveWhysAgent._status()`, which the 4 dashboard metrics and the
+quorum/conflict halves of the attention rail are computed from.
+`assignedGemba` always returns `[]` pending E06 US-43 (Android
+assignment, not built). Frontend: first story to install Clerk
+(`@clerk/react`, not the deprecated `@clerk/clerk-react`), `react-router`
+(v8, not v7 as originally planned — see ADR-020), and TanStack Query;
+`App.tsx` (US-31's chat shell) now lives at `/projects/:id`. New
+`projectStatus` DESIGN.md token group added for `ProjectCard`'s status
+dot, separate from `nodeStatus`. `GET /projects` also enriched with
+`status`/`active_investigation_count`/`member_count`/`description`
+(the latter a new column) since no endpoint existed for the dashboard
+grid's required fields.
+
 ---
 
 ## SP08 Stories — Investigation Setup

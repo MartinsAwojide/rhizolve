@@ -20,6 +20,14 @@ export const designTokens = {
   warning: { light: '#854F0B', dark: '#EF9F27' },
 } as const
 
+// Mirrors DESIGN.md's `tokens.projectStatus` front matter (ProjectCard
+// status dot only — see tests/design/test_token_parity.py).
+export const projectStatusTokens = {
+  active: { light: '#D85A30', dark: '#F0997B' },
+  closed: { light: '#888780', dark: '#B4B2A9' },
+  draft: { light: '#854F0B', dark: '#EF9F27' },
+} as const
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
@@ -43,6 +51,9 @@ export default {
         'node-root-cause': 'var(--color-node-root-cause)',
         'node-suspended': 'var(--color-node-suspended)',
         'node-conflict': 'var(--color-node-conflict)',
+        'project-status-active': 'var(--color-project-status-active)',
+        'project-status-closed': 'var(--color-project-status-closed)',
+        'project-status-draft': 'var(--color-project-status-draft)',
       },
       spacing: {
         xs: 'var(--space-xs)',

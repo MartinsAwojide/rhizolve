@@ -76,6 +76,22 @@ tokens:
       light: "#BA7517"
       dark:  "#EF9F27"
 
+  # --- Project dashboard status vocabulary (ProjectCard status dot ONLY) ---
+  # Separate from nodeStatus (which stays investigation-state-only per the
+  # chrome/content firewall) but visually echoes the same coral/amber
+  # vocabulary per US-32 T07 — solid coral = active, hollow = closed,
+  # amber = draft.
+  projectStatus:
+    active:               # solid coral — project has an in-progress investigation
+      light: "#D85A30"
+      dark:  "#F0997B"
+    closed:               # hollow grey — all investigations complete
+      light: "#888780"
+      dark:  "#B4B2A9"
+    draft:                # amber — no investigations started yet
+      light: "#854F0B"
+      dark:  "#EF9F27"
+
   typography:
     sans:
       fontFamily: "Inter, system-ui, sans-serif"

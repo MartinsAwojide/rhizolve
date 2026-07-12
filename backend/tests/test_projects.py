@@ -3,7 +3,9 @@ import uuid
 import pytest
 
 from api.main import app
+from models.investigation import Investigation, InvestigationStatus
 from models.organisation import Organisation
+from models.project_member import Role
 
 
 @pytest.mark.asyncio
@@ -53,3 +55,98 @@ async def test_maturity_inherits_from_org(async_client, monkeypatch):
 async def test_missing_name_returns_422(authed_client):
     r = await authed_client.post("/api/v1/projects", json={"visibility": "private"})
     assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_description_persists_and_defaults_to_none(authed_client):
+    r = await authed_client.post(
+        "/api/v1/projects",
+        json={
+            "name": "Test",
+            "visibility": "private",
+            "description": "glue line investigations",
+        },
+    )
+    assert r.status_code == 200
+    assert r.json()["description"] == "glue line investigations"
+
+    r2 = await authed_client.post(
+        "/api/v1/projects", json={"name": "No description", "visibility": "private"}
+    )
+    assert r2.status_code == 200
+    assert r2.json()["description"] is None
+
+
+@pytest.mark.asyncio
+async def test_project_status_is_draft_with_no_investigations(authed_client):
+    r = await authed_client.post(
+        "/api/v1/projects", json={"name": "Test", "visibility": "private"}
+    )
+    body = r.json()
+    assert body["status"] == "draft"
+    assert body["active_investigation_count"] == 0
+    assert body["member_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_project_status_is_active_with_pending_investigation(authed_client):
+    r = await authed_client.post(
+        "/api/v1/projects", json={"name": "Test", "visibility": "private"}
+    )
+    project_id = r.json()["id"]
+
+    async with app.state.db_sessionmaker() as session:
+        session.add(
+            Investigation(
+                id=f"inv-{uuid.uuid4()}",
+                project_id=project_id,
+                status=InvestigationStatus.AWAITING_GEMBA,
+            )
+        )
+        await session.commit()
+
+    r2 = await authed_client.get("/api/v1/projects")
+    project = next(p for p in r2.json() if p["id"] == project_id)
+    assert project["status"] == "active"
+    assert project["active_investigation_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_project_status_is_closed_when_all_investigations_complete(
+    authed_client,
+):
+    r = await authed_client.post(
+        "/api/v1/projects", json={"name": "Test", "visibility": "private"}
+    )
+    project_id = r.json()["id"]
+
+    async with app.state.db_sessionmaker() as session:
+        session.add(
+            Investigation(
+                id=f"inv-{uuid.uuid4()}",
+                project_id=project_id,
+                status=InvestigationStatus.COMPLETE,
+            )
+        )
+        await session.commit()
+
+    r2 = await authed_client.get("/api/v1/projects")
+    project = next(p for p in r2.json() if p["id"] == project_id)
+    assert project["status"] == "closed"
+    assert project["active_investigation_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_project_member_count_reflects_all_members(
+    authed_client, async_client, monkeypatch, add_project_member
+):
+    r = await authed_client.post(
+        "/api/v1/projects", json={"name": "Test", "visibility": "private"}
+    )
+    project_id = r.json()["id"]
+
+    await add_project_member(async_client, monkeypatch, project_id, Role.ANALYST)
+
+    r2 = await authed_client.get("/api/v1/projects")
+    project = next(p for p in r2.json() if p["id"] == project_id)
+    assert project["member_count"] == 2

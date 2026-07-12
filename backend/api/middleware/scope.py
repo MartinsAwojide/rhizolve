@@ -37,3 +37,19 @@ async def require_internal_scope(
             status_code=403, detail="External members cannot access this resource"
         )
     return member
+
+
+async def require_org_member(user: User = Depends(get_current_user)) -> User:
+    """Gate for org-wide (project_id-less) resources.
+
+    Checks only "does this user have a home org at all" -- it does not
+    model "internal to a specific project" like require_internal_scope
+    does, since org-scoped routes have no project_id path param to check
+    membership against.
+    """
+    if user.org_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail="No organisation membership for org-scoped resource",
+        )
+    return user

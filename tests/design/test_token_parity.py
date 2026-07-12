@@ -75,7 +75,7 @@ def test_design_md_exists_at_repo_root():
 
 def test_every_color_token_has_both_modes_defined():
     tokens = load_tokens()
-    for group in ("colors", "nodeStatus"):
+    for group in ("colors", "nodeStatus", "projectStatus"):
         for name, value in tokens[group].items():
             assert isinstance(value, dict), f"{group}.{name} must be a light/dark mapping, not a flat value"
             assert "light" in value and "dark" in value, f"{group}.{name} missing a mode"
@@ -83,7 +83,7 @@ def test_every_color_token_has_both_modes_defined():
 
 def test_every_color_value_is_valid_hex():
     tokens = load_tokens()
-    for group in ("colors", "nodeStatus"):
+    for group in ("colors", "nodeStatus", "projectStatus"):
         for name, value in tokens[group].items():
             for mode in ("light", "dark"):
                 assert HEX_RE.match(value[mode]), f"{group}.{name}.{mode} = {value[mode]!r} is not #RRGGBB"
@@ -128,6 +128,19 @@ def test_node_status_markers_clear_non_text_contrast(mode):
             ratio = contrast_ratio(value[mode], bg)
             assert ratio >= AA_GRAPHIC, (
                 f"nodeStatus.{name} on {surface_token} ({mode}) = {ratio:.2f}:1 — below 3:1 (WCAG 1.4.11)"
+            )
+
+
+@pytest.mark.parametrize("mode", ["light", "dark"])
+def test_project_status_markers_clear_non_text_contrast(mode):
+    """ProjectCard status dots are UI graphics — WCAG 1.4.11 requires 3:1."""
+    tokens = load_tokens()
+    for surface_token in ("surface-0", "surface-2"):
+        bg = tokens["colors"][surface_token][mode]
+        for name, value in tokens["projectStatus"].items():
+            ratio = contrast_ratio(value[mode], bg)
+            assert ratio >= AA_GRAPHIC, (
+                f"projectStatus.{name} on {surface_token} ({mode}) = {ratio:.2f}:1 — below 3:1 (WCAG 1.4.11)"
             )
 
 

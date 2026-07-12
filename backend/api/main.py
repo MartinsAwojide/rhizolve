@@ -9,6 +9,7 @@ from agent.five_whys_agent import FiveWhysAgent
 from api.auth import router as auth_router
 from api.chat import router as chat_router
 from api.conflicts import router as conflicts_router
+from api.dashboard import router as dashboard_router
 from api.five_whys_advance import router as five_whys_advance_router
 from api.gemba import router as gemba_router
 from api.invites import router as invites_router
@@ -37,11 +38,15 @@ async def lifespan(app: FastAPI):
     app.state.pubsub = RedisPubSub(app.state.redis)
     app.state.presence = PresenceTracker(app.state.redis)
     app.state.ready = ReadyTracker(app.state.redis)
-    checkpointer, checkpointer_ctx = await make_checkpointer()
-    app.state.five_whys_agent = FiveWhysAgent(checkpointer, pubsub=app.state.pubsub)
-    app.state.attachment_storage = LocalAttachmentStorage()
     app.state.db_engine = make_engine()
     app.state.db_sessionmaker = make_sessionmaker(app.state.db_engine)
+    checkpointer, checkpointer_ctx = await make_checkpointer()
+    app.state.five_whys_agent = FiveWhysAgent(
+        checkpointer,
+        pubsub=app.state.pubsub,
+        db_sessionmaker=app.state.db_sessionmaker,
+    )
+    app.state.attachment_storage = LocalAttachmentStorage()
     yield
     await app.state.db_engine.dispose()
     await checkpointer_ctx.__aexit__(None, None, None)
@@ -73,6 +78,7 @@ app.include_router(tree_navigation_router, prefix="/api/v1/projects")
 app.include_router(quorum_router, prefix="/api/v1/projects")
 app.include_router(five_whys_advance_router, prefix="/api/v1/projects")
 app.include_router(conflicts_router, prefix="/api/v1/projects")
+app.include_router(dashboard_router, prefix="/api/v1/dashboard")
 
 
 @app.get("/api/v1/health")

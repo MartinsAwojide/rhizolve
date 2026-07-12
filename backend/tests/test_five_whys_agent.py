@@ -1,7 +1,14 @@
+import uuid
+
 import pytest
+from sqlalchemy import select
 
 from agent.five_whys_agent import FiveWhysAgent
+from core.db import make_engine, make_sessionmaker
 from core.memory import make_checkpointer
+from models.investigation import Investigation, InvestigationStatus
+from models.project import Project, Visibility
+from models.user import User
 
 
 async def _pinned_why_generator(state):
@@ -585,9 +592,106 @@ async def test_start_investigation_tracks_project_id_for_later_calls(agent):
     )
     investigation_id = started["investigation_id"]
 
-    result = await agent.submit_gemba(investigation_id, result="OK", notes="fine")
+    await agent.submit_gemba(investigation_id, result="OK", notes="fine")
 
     assert agent._config(investigation_id)["configurable"]["thread_id"] == (
         f"proj-042:{investigation_id}"
     )
-    assert result["investigation_id"] == investigation_id
+
+
+@pytest.fixture
+async def db_sessionmaker():
+    engine = make_engine()
+    sessionmaker = make_sessionmaker(engine)
+    yield sessionmaker
+    await engine.dispose()
+
+
+@pytest.fixture
+async def project_id(db_sessionmaker):
+    async with db_sessionmaker() as session:
+        user = User(clerk_user_id=f"clerk_user_{uuid.uuid4()}")
+        session.add(user)
+        await session.flush()
+        project = Project(name="Test", visibility=Visibility.PRIVATE, owner_id=user.id)
+        session.add(project)
+        await session.commit()
+        await session.refresh(project)
+        yield project.id
+
+
+@pytest.fixture
+async def synced_agent(monkeypatch, db_sessionmaker):
+    monkeypatch.setattr("agent.graph.why_generator", _pinned_why_generator)
+    monkeypatch.setattr(
+        "agent.graph.root_cause_validator", _pinned_root_cause_validator
+    )
+    checkpointer, ctx = await make_checkpointer()
+    try:
+        yield FiveWhysAgent(checkpointer, db_sessionmaker=db_sessionmaker)
+    finally:
+        await ctx.__aexit__(None, None, None)
+
+
+@pytest.mark.asyncio
+async def test_start_investigation_syncs_investigation_row(
+    synced_agent, db_sessionmaker, project_id
+):
+    started = await synced_agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+        project_id=project_id,
+    )
+    investigation_id = started["investigation_id"]
+
+    async with db_sessionmaker() as session:
+        row = await session.get(Investigation, investigation_id)
+
+    assert row is not None
+    assert row.project_id == project_id
+    assert row.status == InvestigationStatus.AWAITING_GEMBA
+    assert row.interrupt_type == "hypothesis_review"
+    assert row.node_count == 0
+
+
+@pytest.mark.asyncio
+async def test_submit_gemba_updates_investigation_row_node_counts(
+    synced_agent, db_sessionmaker, project_id
+):
+    started = await synced_agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+        project_id=project_id,
+    )
+    investigation_id = started["investigation_id"]
+
+    await synced_agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+
+    async with db_sessionmaker() as session:
+        row = await session.get(Investigation, investigation_id)
+
+    assert row.node_pending_count == 0
+
+
+@pytest.mark.asyncio
+async def test_agent_without_sessionmaker_does_not_write_investigation_row(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+        project_id="proj-no-sync",
+    )
+    investigation_id = started["investigation_id"]
+
+    engine = make_engine()
+    sessionmaker = make_sessionmaker(engine)
+    async with sessionmaker() as session:
+        result = await session.execute(
+            select(Investigation).where(Investigation.id == investigation_id)
+        )
+        row = result.scalar_one_or_none()
+    await engine.dispose()
+
+    assert row is None

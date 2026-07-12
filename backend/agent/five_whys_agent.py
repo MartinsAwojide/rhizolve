@@ -4,11 +4,14 @@ from typing import Any, Literal
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.redis.aio import AsyncRedisSaver
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from agent.graph import Attachment, WhyNode, build_graph
 from agent.tree_navigation import hard_reset, soft_reset
 from core.conflict import detect_conflict
 from core.pubsub import RedisPubSub, make_channel
+from models.investigation import Investigation, InvestigationStatus
 
 _INTERRUPT_TYPES = {
     "gemba_dispatcher": "hypothesis_review",
@@ -17,6 +20,8 @@ _INTERRUPT_TYPES = {
     "countermeasure_generator": "validator_review",
     "report_generator": "countermeasure_review",
 }
+
+_QUORUM_INTERRUPT_TYPES = {"hypothesis_review", "validator_review", "countermeasure_review"}
 
 
 def _find_active_node(snapshot: Any) -> Any:
@@ -40,7 +45,10 @@ def _tree_to_why_nodes(tree: dict[str, WhyNode]) -> list[WhyNode]:
 
 class FiveWhysAgent:
     def __init__(
-        self, checkpointer: AsyncRedisSaver, pubsub: RedisPubSub | None = None
+        self,
+        checkpointer: AsyncRedisSaver,
+        pubsub: RedisPubSub | None = None,
+        db_sessionmaker: async_sessionmaker[AsyncSession] | None = None,
     ):
         self.graph = build_graph().compile(
             checkpointer=checkpointer,
@@ -49,6 +57,7 @@ class FiveWhysAgent:
         )
         self._project_ids: dict[str, str] = {}
         self._pubsub = pubsub
+        self._db_sessionmaker = db_sessionmaker
 
     def _config(self, investigation_id: str) -> RunnableConfig:
         project_id = self._project_ids[investigation_id]
@@ -262,14 +271,52 @@ class FiveWhysAgent:
         config = self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
         if not snapshot.next:
-            return {
+            result = {
                 "investigation_id": investigation_id,
                 "status": "complete",
                 "interrupt_type": None,
             }
-        interrupt_type = _INTERRUPT_TYPES.get(snapshot.next[0])
-        return {
-            "investigation_id": investigation_id,
-            "status": "awaiting_gemba",
-            "interrupt_type": interrupt_type,
+        else:
+            interrupt_type = _INTERRUPT_TYPES.get(snapshot.next[0])
+            result = {
+                "investigation_id": investigation_id,
+                "status": "awaiting_gemba",
+                "interrupt_type": interrupt_type,
+            }
+
+        if self._db_sessionmaker is not None:
+            await self._sync_investigation_row(investigation_id, snapshot, result)
+
+        return result
+
+    async def _sync_investigation_row(
+        self, investigation_id: str, snapshot: Any, status_result: dict[str, Any]
+    ) -> None:
+        why_nodes = snapshot.values.get("why_nodes", [])
+        values = {
+            "id": investigation_id,
+            "project_id": self._project_ids[investigation_id],
+            "status": (
+                InvestigationStatus.COMPLETE
+                if status_result["status"] == "complete"
+                else InvestigationStatus.AWAITING_GEMBA
+            ),
+            "interrupt_type": status_result["interrupt_type"],
+            "current_depth": snapshot.values.get("current_depth", 0),
+            "root_cause_found": any(n.get("is_root_cause") for n in why_nodes),
+            "node_count": len(why_nodes),
+            "node_pending_count": sum(
+                1 for n in why_nodes if n.get("gemba_result") == "pending"
+            ),
+            "awaiting_quorum": status_result["interrupt_type"]
+            in _QUORUM_INTERRUPT_TYPES,
         }
+        stmt = pg_insert(Investigation).values(**values)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[Investigation.id],
+            set_={k: v for k, v in values.items() if k != "id"},
+        )
+        assert self._db_sessionmaker is not None
+        async with self._db_sessionmaker() as session:
+            await session.execute(stmt)
+            await session.commit()

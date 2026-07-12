@@ -22,6 +22,7 @@ class Project(Base):
     )
     name: Mapped[str] = mapped_column(String)
     domain: Mapped[str | None] = mapped_column(String, nullable=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
     visibility: Mapped[Visibility] = mapped_column(Enum(Visibility, name="visibility"))
     compliance_standards: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     maturity_level: Mapped[int] = mapped_column(Integer, default=2)

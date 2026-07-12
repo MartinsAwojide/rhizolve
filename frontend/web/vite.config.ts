@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://backend:7860',
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://backend:7860',
         changeOrigin: true,
       },
     },
