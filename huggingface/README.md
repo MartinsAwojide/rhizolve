@@ -6,6 +6,7 @@ colorTo: green
 sdk: docker
 app_port: 7860
 pinned: false
+suggested_hardware: cpu-basic
 ---
 
 # Rhizolve — Public POC
@@ -29,6 +30,10 @@ This folder builds an image; it does not deploy itself. Before
 3. Set the `HF_SPACE_ID` GitHub repository variable to `username/space-name`.
 4. In the Space's own **Settings → Repository secrets**, add:
    `REDIS_URL`, `OPENROUTER_API_KEY`, `SERPER_API_KEY`, `REPORT_SIGNING_KEY`.
+5. This README's `suggested_hardware: cpu-basic` is a hint only (shown
+   if someone duplicates the Space) — it does not assign hardware.
+   Confirm CPU Basic (free) is actually selected under Settings →
+   Hardware after creating the Space.
 
 ## Local build
 
