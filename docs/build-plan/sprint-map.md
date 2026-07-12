@@ -5,6 +5,8 @@
 **Velocity:** 20 hours/week, solo engineer + Claude Code  
 **Methodology:** Sequence-based, no fixed deadline
 
+> **Note:** "SP" here means *sprint* (`SP00`–`SP24`, no hyphen). Each epic's `## Spike` sections in `docs/agile/e*.md` use a separate, unrelated numbering scheme, `SP-01`–`SP-16` (hyphenated). The two don't correspond — e.g. sprint `SP09` and spike `SP-09` are different things.
+
 ---
 
 ## Epic Index

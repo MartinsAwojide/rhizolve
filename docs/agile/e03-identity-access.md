@@ -20,6 +20,8 @@
 
 ## Spike
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-03 — Clerk SDK FastAPI integration — DONE**  
 Time-box: 0.5 day. Question: Does `clerk-backend-api` Python SDK verify session tokens cleanly in FastAPI `Depends`, or is raw JWT verification via `python-jose` more reliable? Output: Library and approach selected. Done when: `get_current_user` dependency returns a `User` object from a valid Clerk token.
 

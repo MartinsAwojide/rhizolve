@@ -20,6 +20,8 @@
 
 ## Spike
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-08 — Cactus model download strategy**  
 Time-box: 1 day. Question: Proactive (first launch) vs lazy (first offline inference)? OOM risk on budget Exynos devices? Output: Download strategy documented in ADR-003. Done when: Download completes without OOM on Pixel 6a AVD.
 

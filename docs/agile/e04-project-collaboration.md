@@ -22,6 +22,8 @@
 
 ## Spike
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-04 — Email delivery provider**  
 Time-box: 0.5 day. Question: Resend vs Postmark — Python SDK quality, deliverability, free tier? Done when: Test email delivered to real inbox from FastAPI using chosen SDK.
 

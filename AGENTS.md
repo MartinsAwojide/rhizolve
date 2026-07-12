@@ -25,6 +25,8 @@ Once a plan is approved, execute it **task by task, not user-story by user-story
 
 Never add `Co-Authored-By: Claude` (or any AI co-author trailer) to commit messages. Never run `git push` unless the user explicitly asks for it in that turn — a prior push approval does not carry over.
 
+After every `git push`, check its output/exit code for errors (rejected push, failed CI-triggered checks visible in the push response, auth failures) before reporting the push as done — don't assume success just because the command returned.
+
 Commit messages follow `{feat|fix|chore|docs|refactor|test|style|perf|build|ci}: {message}` — type prefix, colon, space, then a concise imperative summary of the change.
 
 ## Before any architectural change
@@ -40,6 +42,10 @@ Build and validate every feature end-to-end against real infrastructure, not jus
 ## Work is spec'd as Hills → Epics → User Stories → Tasks → Tests
 
 See `docs/product-brief.md` (the Hill), `docs/build-plan/sprint-map.md` (sequencing), `docs/agile/e*.md` (the 12 epics). Before implementing anything, find the relevant `US-xx` story — its acceptance criteria and pre-written tests are the spec. Don't invent scope beyond what the story states without asking.
+
+**"SP" is ambiguous across the docs — two unrelated numbering schemes share the prefix:** `SP00`–`SP24` (no hyphen) are *sprints* from `docs/build-plan/sprint-map.md`; `SP-01`–`SP-16` (hyphenated) are *spikes*, one set per epic's `## Spike` section in `docs/agile/e*.md`. They don't correspond 1:1 — e.g. sprint `SP09` and spike `SP-09` are unrelated. Always write the hyphen when referring to a spike, and check which scheme a bare "SP##" reference means before acting on it.
+
+An epic's `## Spike` section(s) must be resolved before its first `US-xx` story is implemented — spikes exist to settle library/API/pricing questions that a story's design would otherwise guess at. If a spike hasn't been answered yet when picking up that epic's first story, resolve it first (per "Research must be current, not just remembered" below) and record the finding (in the spike section itself, and in an ADR if it drives an architectural decision) before writing any story code.
 
 ## UI work
 

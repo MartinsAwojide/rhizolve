@@ -19,6 +19,8 @@
 
 ## Spike
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-01 — Upstash Redis + `AsyncRedisSaver` HTTPS compatibility**  
 Time-box: 0.5 day. Question: Does `AsyncRedisSaver.from_conn_string()` work with Upstash HTTPS REST URL or does it require native TCP? Output: Connection string format confirmed in ADR-002. Done when: `asetup()` passes against Upstash free tier.
 

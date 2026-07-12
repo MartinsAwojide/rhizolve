@@ -22,6 +22,8 @@
 
 ## Spikes
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-09 — Koog HITL feature status**  
 Time-box: 0.5 day. Check GitHub issue #2064. If shipped: use native HITL. If not: use `CompletableDeferred<GembaResponse>` workaround. Done when: HITL approach confirmed and documented.
 

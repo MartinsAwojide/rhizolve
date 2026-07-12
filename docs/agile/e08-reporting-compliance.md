@@ -23,6 +23,8 @@
 
 ## Spike
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-11 — Audit log storage**  
 Time-box: 1 day. Question: Redis Streams (append-only but ephemeral without AOF config) vs Postgres append-only table (stronger durability guarantee) for ISO 9001 compliance? Output: Decision documented; migration written. Done when: Append-only constraint enforced at DB level and verified by a test that fails on UPDATE.
 

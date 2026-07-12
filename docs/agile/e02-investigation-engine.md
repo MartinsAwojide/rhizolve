@@ -21,6 +21,8 @@
 
 ## Spike
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-02 — `interrupt_after` sequencing with conditional edges — DONE**  
 Time-box: 1 day. Question: When `interrupt_after=["root_cause_validator"]` is set, does the graph pause after the node completes but before the conditional edge router runs? Output: Confirmed sequencing with a minimal test graph. Any workaround noted. Done when: 3-node test graph demonstrates correct pause-then-route behaviour.
 

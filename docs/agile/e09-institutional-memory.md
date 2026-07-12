@@ -21,6 +21,8 @@
 
 ## Spikes
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-16 — Embedding provider selection** *(run before SP-13 — cost projection depends on this)*  
 Time-box: 2 days. See [ADR-005](../adr/ADR-005-async-redis-store.md#embedding-provider-sp-16--pending). Resolves: (1) whether OpenRouter exposes an embeddings endpoint, avoiding a second vendor alongside `text-embedding-3-small`; (2) accept/reject decision on Android on-device RAG via Liquid AI's `LFM2.5-Embedding-350M` — currently Android has zero institutional memory access when fully offline, and this spike decides whether that is fixed or formally accepted as a stated design limitation.
 

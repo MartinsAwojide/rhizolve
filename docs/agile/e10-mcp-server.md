@@ -31,6 +31,8 @@ All 14 Rhizolve tools callable from Claude Desktop via FastMCP 3.0 mounted on th
 
 ## Spike
 
+*("SP-##" below is a spike ID, unrelated to the "SP##" sprint numbers in `docs/build-plan/sprint-map.md` — see AGENTS.md.)*
+
 **SP-14 — FastMCP 3.0 OpenAPIProvider with Rhizolve FastAPI**  
 Time-box: 2 days.  
 Questions:
