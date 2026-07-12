@@ -301,6 +301,23 @@ exercise end-to-end.
 - T02: Write `src/features/chat/ModePopover.tsx` — explanation and manual toggle on click
 - T03: Wire mode state to `useConversation` hook
 
+**Status: done.** No given test literal in this story (unlike US-33), so scope
+was pinned down via clarifying questions before implementation: (1)
+`useConversation` was built as a full send/receive hook — holds
+`messages: ChatMessage[]`, POSTs `/api/v1/chat` via an extended
+`useAuthFetch` (now accepts a `RequestInit` for POST+body), appends the
+user message optimistically then the assistant reply, and syncs `mode`
+from `ChatResponse.active_mode` — rather than a mode-only stub, since a
+functional hook was more useful than a placeholder. (2) `ModePopover`'s
+override is client-side only: forcing shallow/deep sets local override
+state that `sendMessage` respects on the next call, overriding the
+response's own `active_mode` suggestion. `ChatInput`'s mode prop changed
+from an arbitrary `string` to `'shallow' | 'deep'`, now rendering
+`ModeIndicator` (which owns click-to-open `ModePopover`) instead of a
+plain pill — existing tests updated accordingly. 74/74 `pnpm vitest run`
+green, `pnpm lint` and `pnpm tsc --noEmit` clean. No ADR — routine hook/UI
+composition, no new dependency or cross-service contract change.
+
 ---
 
 ## SP09 Stories — Full Flow

@@ -40,6 +40,28 @@ describe('useAuthFetch', () => {
     fetchSpy.mockRestore()
   })
 
+  it('merges caller-supplied init (method, body, headers) with the auth header', async () => {
+    getTokenMock.mockResolvedValue('test-token')
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    const { result } = renderHook(() => useAuthFetch())
+    await result.current('/api/v1/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'hi' }),
+    })
+
+    expect(fetchSpy).toHaveBeenCalledWith('/api/v1/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+      body: JSON.stringify({ message: 'hi' }),
+    })
+
+    fetchSpy.mockRestore()
+  })
+
   it('throws on a non-ok response instead of returning the error body as data', async () => {
     getTokenMock.mockResolvedValue(null)
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(

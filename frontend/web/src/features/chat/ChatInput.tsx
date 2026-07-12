@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
+import { ModeIndicator } from './ModeIndicator'
+
+type ChatMode = 'shallow' | 'deep'
 
 type ChatInputProps = {
-  mode: string
+  mode: ChatMode
   onSubmit: (text: string, isBtw: boolean) => void
+  onOverride: (mode: ChatMode) => void
 }
 
 const BTW_PREFIX = /^\/btw\b/
 
-export function ChatInput({ mode, onSubmit }: ChatInputProps) {
+export function ChatInput({ mode, onSubmit, onOverride }: ChatInputProps) {
   const [text, setText] = useState('')
 
   function handleSend() {
@@ -19,7 +23,7 @@ export function ChatInput({ mode, onSubmit }: ChatInputProps) {
 
   return (
     <div className="flex items-center gap-sm">
-      <span className="rounded-pill bg-surface-1 px-sm py-xs text-text-secondary">{mode}</span>
+      <ModeIndicator mode={mode} onOverride={onOverride} />
       <input
         type="text"
         value={text}
