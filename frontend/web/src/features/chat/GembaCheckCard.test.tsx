@@ -44,4 +44,22 @@ describe('GembaCheckCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /^submit$/i }))
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ attachments: [file] }))
   })
+
+  it('shows a node-status marker icon for each result option', () => {
+    const { container } = render(
+      <GembaCheckCard hypothesis="Belt worn out" instructions="Inspect belt" onSubmit={vi.fn()} />,
+    )
+    expect(container.querySelector('svg[aria-label="ruledOut"]')).toBeInTheDocument()
+    expect(container.querySelector('svg[aria-label="confirmed"]')).toBeInTheDocument()
+    expect(container.querySelector('svg[aria-label="rootCause"]')).toBeInTheDocument()
+  })
+
+  it('keeps radio accessible names exact despite the added icons', () => {
+    render(
+      <GembaCheckCard hypothesis="Belt worn out" instructions="Inspect belt" onSubmit={vi.fn()} />,
+    )
+    expect(screen.getByRole('radio', { name: 'OK' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'NOK' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'ROOT_CAUSE' })).toBeInTheDocument()
+  })
 })
