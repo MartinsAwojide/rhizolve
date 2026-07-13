@@ -4,16 +4,46 @@ import App from './App'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ProjectCreatePage } from './features/projects/ProjectCreatePage'
 import { ProjectDashboardPage } from './features/projects/ProjectDashboardPage'
+import { AuthLayout } from './layouts/AuthLayout'
+
+const clerkAppearance = {
+  variables: {
+    colorPrimary: '#185FA5',
+    colorBackground: '#FFFFFF',
+    colorText: '#1C2024',
+    colorInputBackground: '#F3EEE6',
+    borderRadius: '8px',
+    fontFamily: 'Inter, system-ui, sans-serif',
+  },
+}
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/projects" replace /> },
   {
     path: '/login/*',
-    element: <SignIn routing="path" path="/login" fallbackRedirectUrl="/projects" />,
+    element: (
+      <AuthLayout>
+        <SignIn
+          routing="path"
+          path="/login"
+          fallbackRedirectUrl="/projects"
+          appearance={clerkAppearance}
+        />
+      </AuthLayout>
+    ),
   },
   {
     path: '/register/*',
-    element: <SignUp routing="path" path="/register" fallbackRedirectUrl="/projects" />,
+    element: (
+      <AuthLayout>
+        <SignUp
+          routing="path"
+          path="/register"
+          fallbackRedirectUrl="/projects"
+          appearance={clerkAppearance}
+        />
+      </AuthLayout>
+    ),
   },
   {
     element: <ProtectedRoute />,
