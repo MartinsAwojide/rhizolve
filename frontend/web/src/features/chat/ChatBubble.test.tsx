@@ -26,4 +26,11 @@ describe('ChatBubble', () => {
     const bubble = screen.getByTestId('chat-bubble')
     expect(bubble).toHaveAttribute('data-role', 'user')
   })
+
+  it('renders a system message centered and muted, without a card', () => {
+    render(<ChatBubble role="system" content="Driver changed to Alex" />)
+    const bubble = screen.getByTestId('chat-bubble')
+    expect(bubble).toHaveAttribute('data-role', 'system')
+    expect(bubble).toHaveClass('text-center', 'text-text-muted', 'text-xs')
+  })
 })
