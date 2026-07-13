@@ -1,6 +1,23 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout } from './AppLayout'
+
+vi.mock('@clerk/react', () => ({
+  useAuth: () => ({ getToken: async () => 'test-token' }),
+}))
+
+function renderLayout(props: Parameters<typeof AppLayout>[0] = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <AppLayout {...props} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
 
 function setViewport(width: number) {
   vi.stubGlobal(
@@ -27,28 +44,28 @@ afterEach(() => vi.unstubAllGlobals())
 describe('AppLayout', () => {
   it('shows all three columns at 1440px', () => {
     setViewport(1440)
-    render(<AppLayout />)
+    renderLayout()
     expect(screen.getByTestId('sidebar')).toBeVisible()
     expect(screen.getByTestId('investigation-panel')).toBeVisible()
   })
 
   it('collapses investigation panel below 1280px', () => {
     setViewport(1024)
-    render(<AppLayout />)
+    renderLayout()
     expect(screen.getByTestId('sidebar')).toBeVisible()
     expect(screen.queryByTestId('investigation-panel')).not.toBeVisible()
   })
 
   it('collapses both sidebar and investigation panel below 768px', () => {
     setViewport(600)
-    render(<AppLayout />)
+    renderLayout()
     expect(screen.queryByTestId('sidebar')).not.toBeVisible()
     expect(screen.queryByTestId('investigation-panel')).not.toBeVisible()
   })
 
   it('hides the investigation panel when there is no active investigation', () => {
     setViewport(1440)
-    render(<AppLayout hasActiveInvestigation={false} />)
+    renderLayout({ hasActiveInvestigation: false })
     expect(screen.queryByTestId('investigation-panel')).not.toBeVisible()
   })
 })
