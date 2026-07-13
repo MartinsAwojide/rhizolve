@@ -1,19 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
+import { useClerk, useUser } from '@clerk/react'
 import { Link } from 'react-router'
-import { useAuthFetch } from '../../hooks/useAuthFetch'
+import { Button } from '../../components/ui/Button'
+import { Logo } from '../../components/Logo'
 import { MetricsRow } from './MetricsRow'
 import { NeedsAttentionRail } from './NeedsAttentionRail'
 import { ProjectCard, type ProjectCardData } from './ProjectCard'
+import { useProjects, type ProjectListItem } from './useProjects'
 
-interface ProjectListItem {
-  id: string
-  name: string
-  domain: string | null
-  description: string | null
-  status: ProjectCardData['status']
-  active_investigation_count: number
-  maturity_level: number
-  member_count: number
+function initials(firstName?: string | null, lastName?: string | null): string {
+  return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || '?'
 }
 
 function toCardData(project: ProjectListItem): ProjectCardData {
@@ -30,14 +25,24 @@ function toCardData(project: ProjectListItem): ProjectCardData {
 }
 
 export function ProjectDashboardPage() {
-  const authFetch = useAuthFetch()
-  const { data: projects } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => authFetch('/api/v1/projects') as Promise<ProjectListItem[]>,
-  })
+  const { data: projects } = useProjects()
+  const { user } = useUser()
+  const { signOut } = useClerk()
 
   return (
-    <div className="flex gap-lg p-lg">
+    <div>
+      <div className="sticky top-0 z-10 flex items-center gap-md border-b border-border bg-surface-0 px-lg py-sm">
+        <Logo className="h-8" />
+        <div className="ml-auto flex items-center gap-sm">
+          <Button variant="secondary" size="sm" onClick={() => signOut()}>
+            Sign out
+          </Button>
+          <div className="flex h-8 w-8 items-center justify-center rounded-pill bg-accent-fill text-xs font-medium text-on-accent">
+            {initials(user?.firstName, user?.lastName)}
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-lg p-lg">
       <div className="flex flex-1 flex-col gap-lg">
         <MetricsRow />
         <div className="grid grid-cols-3 gap-md">
@@ -53,6 +58,7 @@ export function ProjectDashboardPage() {
         </div>
       </div>
       <NeedsAttentionRail />
+      </div>
     </div>
   )
 }
