@@ -19,7 +19,19 @@ export function ValidatorReviewCard({ node, confidence, onSubmit }: ValidatorRev
         AI decision: {node.is_root_cause ? 'Root cause' : 'Not root cause'}
       </p>
       {confidence !== undefined && (
-        <p className="text-text-muted">Confidence: {Math.round(confidence * 100)}%</p>
+        <div className="mt-sm">
+          <div className="flex items-center justify-between text-xs text-text-muted">
+            <span>Confidence</span>
+            <span className="font-mono text-text-secondary">{Math.round(confidence * 100)}%</span>
+          </div>
+          <div className="mt-xs h-1.5 overflow-hidden rounded-pill bg-border">
+            <div
+              data-testid="confidence-meter-fill"
+              className="h-full rounded-pill bg-accent-fill"
+              style={{ width: `${Math.round(confidence * 100)}%` }}
+            />
+          </div>
+        </div>
       )}
       <label className="mt-md flex items-center gap-xs">
         <input

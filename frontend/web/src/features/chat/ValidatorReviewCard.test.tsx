@@ -45,4 +45,10 @@ describe('ValidatorReviewCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /^submit$/i }))
     expect(onSubmit).toHaveBeenCalledWith({ override: false })
   })
+
+  it('renders the confidence percentage in mono and a proportional meter bar', () => {
+    render(<ValidatorReviewCard node={mockNode} confidence={0.82} onSubmit={vi.fn()} />)
+    expect(screen.getByText('82%')).toHaveClass('font-mono')
+    expect(screen.getByTestId('confidence-meter-fill')).toHaveStyle({ width: '82%' })
+  })
 })
