@@ -22,4 +22,33 @@ describe('Button', () => {
     render(<Button disabled>Disabled</Button>)
     expect(screen.getByRole('button', { name: 'Disabled' })).toBeDisabled()
   })
+
+  it('applies ghost variant styling when requested', () => {
+    render(<Button variant="ghost">Ghost</Button>)
+    const btn = screen.getByRole('button', { name: 'Ghost' })
+    expect(btn).not.toHaveClass('bg-accent-fill')
+    expect(btn).toHaveClass('text-accent')
+  })
+
+  it('applies danger variant styling when requested', () => {
+    render(<Button variant="danger">Danger</Button>)
+    const btn = screen.getByRole('button', { name: 'Danger' })
+    expect(btn).toHaveClass('text-danger')
+    expect(btn).toHaveClass('border-danger')
+  })
+
+  it('defaults to md size', () => {
+    render(<Button>Sized</Button>)
+    expect(screen.getByRole('button', { name: 'Sized' })).toHaveClass('h-10')
+  })
+
+  it('applies sm size classes when requested', () => {
+    render(<Button size="sm">Small</Button>)
+    expect(screen.getByRole('button', { name: 'Small' })).toHaveClass('h-8')
+  })
+
+  it('applies lg size classes when requested', () => {
+    render(<Button size="lg">Large</Button>)
+    expect(screen.getByRole('button', { name: 'Large' })).toHaveClass('h-12')
+  })
 })
