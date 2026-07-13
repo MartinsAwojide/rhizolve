@@ -27,7 +27,7 @@ jobs:
       - name: Assemble deployable POC source
         run: ./scripts/hf-poc-assemble.sh
 
-      - uses: astral-sh/setup-uv@v8
+      - uses: astral-sh/setup-uv@v8.3.2
 
       # huggingface/hub-sync@v0.1.0 always runs `hf repo create --exist-ok`
       # before uploading, and HF's API validates SDK/hardware billing
