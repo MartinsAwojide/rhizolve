@@ -564,10 +564,34 @@ Hugging Face Space" step in that workflow file for the confirmed root
 cause (HF's create-repo billing check fires on every sync attempt,
 `exist_ok` or not) and the two unimplemented ways forward (HF PRO, or
 switch to a git-push-based sync). Not resolved this session.
-No full authenticated manual walkthrough (sign in → create project →
-start investigation → submit review → see tree update → click-to-scroll)
-was performed this session for the same reason; flagging as open before
-US-38 pilot testing begins.
+**Update (2026-07-13) — real walkthrough performed, one blocking gap found.**
+Ran the flow live via a local dev-instance Clerk session against
+`scripts/dev-up.sh`'s stack: signed in, created a real project
+(`POST /api/v1/projects` → `proj-5e39a5b5`), started a real investigation
+(`POST /api/v1/chat action=start_investigation` → real
+`FiveWhysAgent.start_investigation` call, real OpenRouter LLM call),
+`GET .../status` correctly returned `interrupt_type: hypothesis_review`
+with 6 real generated hypotheses, `HypothesisReviewCard` rendered them
+exactly as designed. Confirms tasks #70/71 (status transport) work
+end-to-end, not just under test mocks.
+
+**Blocked at hypothesis-review submission — `POST .../hypothesis-review`
+returns 403.** Root cause: `require_driver` (ADR-015) reads a
+`driver:{investigation_id}` Redis key that's only ever written by
+`PresenceTracker.heartbeat`, and **no frontend code calls
+`.../presence/heartbeat` anywhere** (confirmed via
+`grep -rn heartbeat frontend/web/src` — zero matches). No heartbeat
+ever fires, so no driver is ever cached, so every review submission
+403s unconditionally — not an edge case, this blocks every pilot
+tester from completing a single investigation past hypothesis review.
+US-38a's plan explicitly deferred "driver-status UI" as out of scope
+("just letting 403s surface if they occur"), but didn't anticipate this
+means the review flow is *fully* blocked, not occasionally gated.
+**This needs its own scoped task/story (wire a heartbeat interval into
+`useConversation` or a new hook, called once an investigation starts)
+before a pilot tester can get past hypothesis review.** Not fixed this
+session — flagging as the actual next blocker before US-38 can begin,
+ahead of the GCP/Terraform deployment work.
 
 ---
 
