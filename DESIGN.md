@@ -138,7 +138,7 @@ Rhizolve guides personnel—from field operators standing on warehouse floors to
 ## Core UX Principles
 
 ### 1. Two Environments, Tailored Layout Hierarchies
-* **Desk View (Desktop Canvas):** Uses a multi-pane layout. Left pane maintains continuous context (incident metadata, timeline); center pane renders the expansive 2D branching graph (`@xyflow/react`); right pane displays the interactive AI Co-Pilot chat workspace.
+* **Desk View (Desktop Canvas):** Uses a multi-pane layout. Left pane maintains continuous context (incident metadata, timeline); center pane hosts the interactive AI Co-Pilot chat workspace; right pane renders the expansive 2D branching graph (`@xyflow/react`).
 * **Field View (Mobile Execution):** Strips away the 2D infinite canvas entirely. Mobile operators interact via a linearized, chronological stack of actionable **Gemba Check Cards**. They review single hypotheses, snap verifying evidence photos, and input concrete system metrics.
 
 ### 2. Strict Semantic Separation (The Chrome/Content Firewall)
@@ -155,8 +155,8 @@ Rhizolve guides personnel—from field operators standing on warehouse floors to
 
 ### Desktop: Three-Pane Infinite Canvas Architecture
 * **Left Sidebar (Width: 320px, `surface-1`):** Navigation, active incident logs, structural tags, and investigator verification signatures (`mono`).
-* **Center Stage (Flexible Infinite Canvas, `surface-0`):** Graph nodes connected with orthogonal right-angle paths (`d3-hierarchy`). Active paths use solid `nodeStatus.active` vectors.
-* **Right Panel (Width: 400px, `surface-2`):** The AI Co-Pilot chat environment. Chat bubbles alternate between user inputs (sans text on subtle gray backgrounds) and agent answers (serif text inside clear white panels).
+* **Center Stage (Flexible, `surface-0`):** The AI Co-Pilot chat environment. Chat bubbles alternate between user inputs (sans text on subtle gray backgrounds) and agent answers (serif text inside clear white panels).
+* **Right Panel (Width: 400px, `surface-2`):** The infinite-canvas why-tree. Graph nodes connected with orthogonal right-angle paths (`d3-hierarchy`). Active paths use solid `nodeStatus.active` vectors.
 
 ### Mobile (Android): Linear Stream Architecture
 * No infinite-zoom scrolling. Mobile operators receive full-bleed cards representing individual nodes marked as `active` by the desk team.
