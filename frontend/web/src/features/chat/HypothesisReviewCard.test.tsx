@@ -53,4 +53,15 @@ describe('HypothesisReviewCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /^submit$/i }))
     expect(onSubmit).toHaveBeenCalledWith(mockHypotheses)
   })
+
+  it('renders AI-authored hypothesis text in the serif voice', () => {
+    render(<HypothesisReviewCard hypotheses={mockHypotheses} onSubmit={vi.fn()} />)
+    expect(screen.getByDisplayValue('Belt worn out')).toHaveClass('font-voice')
+  })
+
+  it('shows a mono index marker per hypothesis', () => {
+    render(<HypothesisReviewCard hypotheses={mockHypotheses} onSubmit={vi.fn()} />)
+    expect(screen.getByText('1')).toHaveClass('font-mono')
+    expect(screen.getByText('2')).toHaveClass('font-mono')
+  })
 })

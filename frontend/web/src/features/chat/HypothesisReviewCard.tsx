@@ -53,11 +53,12 @@ export function HypothesisReviewCard({ hypotheses, onSubmit }: HypothesisReviewC
       <ul className="flex flex-col gap-sm">
         {items.map((item, index) => (
           <li key={`${item.branch_path}-${index}`} className="flex items-center gap-sm">
+            <span className="font-mono text-xs text-text-muted">{index + 1}</span>
             <input
               type="text"
               value={item.hypothesis}
               onChange={(e) => updateHypothesis(index, e.target.value)}
-              className="flex-1 rounded-control bg-surface-1 px-sm py-xs text-text-primary"
+              className="flex-1 rounded-control bg-surface-1 px-sm py-xs font-voice text-text-primary"
             />
             <Button
               type="button"
