@@ -28,6 +28,15 @@ export const projectStatusTokens = {
   draft: { light: '#854F0B', dark: '#EF9F27' },
 } as const
 
+// Intentional additions layered on top of DESIGN.md's tokens (not part of the
+// token-parity contract — see docs/brand/readme.md's "Intentional additions"
+// note and docs/brand/tokens/colors.css).
+export const borderTokens = {
+  border: { light: '#E7E0D5', dark: '#2C333D' },
+  'border-strong': { light: '#D2C9BB', dark: '#3A424E' },
+  ring: { light: '#185FA5', dark: '#378ADD' },
+} as const
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
@@ -54,6 +63,9 @@ export default {
         'project-status-active': 'var(--color-project-status-active)',
         'project-status-closed': 'var(--color-project-status-closed)',
         'project-status-draft': 'var(--color-project-status-draft)',
+        border: 'var(--color-border)',
+        'border-strong': 'var(--color-border-strong)',
+        ring: 'var(--color-ring)',
       },
       spacing: {
         xs: 'var(--space-xs)',
@@ -66,6 +78,11 @@ export default {
         control: 'var(--radius-control)',
         card: 'var(--radius-card)',
         pill: 'var(--radius-pill)',
+      },
+      boxShadow: {
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
