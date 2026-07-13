@@ -9,6 +9,8 @@ interface AppLayoutProps {
   projectId?: string
   investigationId?: string | null
   onNodeClick?: (nodeId: string) => void
+  investigationPanelTab?: 'why-tree' | 'report'
+  onInvestigationPanelTabChange?: (tab: 'why-tree' | 'report') => void
 }
 
 export function AppLayout({
@@ -17,6 +19,8 @@ export function AppLayout({
   projectId = '',
   investigationId = null,
   onNodeClick,
+  investigationPanelTab,
+  onInvestigationPanelTabChange,
 }: AppLayoutProps) {
   const isAtLeastTablet = useMediaQuery('(min-width: 768px)')
   const isDesktop = useMediaQuery('(min-width: 1280px)')
@@ -45,7 +49,7 @@ export function AppLayout({
         hidden={!sidebarVisible}
         className="w-[320px] overflow-y-auto bg-surface-1"
       >
-        <ProjectSidebar />
+        <ProjectSidebar currentProjectId={projectId} />
       </aside>
 
       <main className="overflow-y-auto bg-surface-0">{children}</main>
@@ -69,6 +73,8 @@ export function AppLayout({
           projectId={projectId}
           investigationId={investigationId}
           onNodeClick={onNodeClick}
+          activeTab={investigationPanelTab}
+          onTabChange={onInvestigationPanelTabChange}
         />
       </aside>
     </div>

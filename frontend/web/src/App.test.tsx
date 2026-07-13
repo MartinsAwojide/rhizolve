@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
@@ -11,6 +13,29 @@ vi.mock('react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router')>()
   return { ...actual, useParams: () => ({ id: 'proj-1' }) }
 })
+
+vi.mock('@clerk/react', () => ({
+  useAuth: () => ({ getToken: async () => 'test-token' }),
+}))
+
+vi.mock('./features/investigation/useWhyTree', () => ({
+  useWhyTree: () => ({ nodes: [] }),
+}))
+
+vi.mock('./hooks/usePresence', () => ({
+  usePresence: () => ({ participants: [], driver: null }),
+}))
+
+function renderApp() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
 
 const whyTreeOnNodeClick = { current: null as ((nodeId: string) => void) | null }
 vi.mock('./features/investigation/WhyTree', () => ({
@@ -71,13 +96,13 @@ describe('App', () => {
         messages: [{ type: 'shallow', role: 'assistant', content: 'Hi there' }],
       }),
     )
-    render(<App />)
+    renderApp()
     expect(screen.getByText('Hi there')).toBeInTheDocument()
   })
 
   it('renders the start-investigation form when there is no active investigation', () => {
     useConversationMock.mockReturnValue(baseConversation())
-    render(<App />)
+    renderApp()
     expect(
       screen.getByRole('button', { name: /start investigation/i }),
     ).toBeInTheDocument()
@@ -86,7 +111,7 @@ describe('App', () => {
   it('submits the start-investigation form via startInvestigation', () => {
     const startInvestigation = vi.fn()
     useConversationMock.mockReturnValue(baseConversation({ startInvestigation }))
-    render(<App />)
+    renderApp()
 
     fireEvent.change(screen.getByLabelText(/phenomenon/i), {
       target: { value: 'Glue overflowed' },
@@ -98,7 +123,7 @@ describe('App', () => {
 
   it('does not render the start-investigation form once an investigation exists', () => {
     useConversationMock.mockReturnValue(baseConversation({ investigationId: 'inv-1' }))
-    render(<App />)
+    renderApp()
     expect(
       screen.queryByRole('button', { name: /start investigation/i }),
     ).not.toBeInTheDocument()
@@ -106,7 +131,7 @@ describe('App', () => {
 
   it('renders the WhyTree stub once an investigation exists', () => {
     useConversationMock.mockReturnValue(baseConversation({ investigationId: 'inv-1' }))
-    render(<App />)
+    renderApp()
     expect(screen.getByTestId('why-tree-stub')).toBeInTheDocument()
   })
 
@@ -127,7 +152,7 @@ describe('App', () => {
         messages: [{ type: 'interrupt', interrupt_type: 'gemba_result_review', node }],
       }),
     )
-    render(<App />)
+    renderApp()
 
     const wrapper = screen.getByTestId('node-message-wrapper')
     const scrollSpy = vi.fn()
