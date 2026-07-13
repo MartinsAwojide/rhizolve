@@ -8,9 +8,14 @@ type ModeIndicatorProps = {
   onOverride: (mode: ChatMode) => void
 }
 
+const MODE_GLYPH: Record<ChatMode, string> = {
+  shallow: '●',
+  deep: '◆',
+}
+
 const MODE_LABEL: Record<ChatMode, string> = {
-  shallow: '● Shallow',
-  deep: '◆ Deep',
+  shallow: 'Shallow',
+  deep: 'Deep',
 }
 
 export function ModeIndicator({ mode, onOverride }: ModeIndicatorProps) {
@@ -21,8 +26,9 @@ export function ModeIndicator({ mode, onOverride }: ModeIndicatorProps) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="rounded-pill bg-surface-1 px-sm py-xs text-text-secondary"
+        className="inline-flex items-center gap-xs rounded-pill bg-surface-1 px-sm py-xs text-text-secondary"
       >
+        <span className="text-accent">{MODE_GLYPH[mode]}</span>
         {MODE_LABEL[mode]}
       </button>
       {open && (

@@ -5,7 +5,8 @@ import { ChatInput } from './ChatInput'
 describe('ChatInput', () => {
   it('displays the current mode via the mode indicator', () => {
     render(<ChatInput mode="shallow" onSubmit={vi.fn()} onOverride={vi.fn()} />)
-    expect(screen.getByText('● Shallow')).toBeInTheDocument()
+    expect(screen.getByText('●')).toBeInTheDocument()
+    expect(screen.getByText('Shallow')).toBeInTheDocument()
   })
 
   it('calls onSubmit with the typed text and isBtw false for normal messages', () => {

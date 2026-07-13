@@ -5,12 +5,20 @@ import { ModeIndicator } from './ModeIndicator'
 describe('ModeIndicator', () => {
   it('shows the shallow marker and label', () => {
     render(<ModeIndicator mode="shallow" onOverride={vi.fn()} />)
-    expect(screen.getByText('● Shallow')).toBeInTheDocument()
+    expect(screen.getByText('●')).toBeInTheDocument()
+    expect(screen.getByText('Shallow')).toBeInTheDocument()
   })
 
   it('shows the deep marker and label', () => {
     render(<ModeIndicator mode="deep" onOverride={vi.fn()} />)
-    expect(screen.getByText('◆ Deep')).toBeInTheDocument()
+    expect(screen.getByText('◆')).toBeInTheDocument()
+    expect(screen.getByText('Deep')).toBeInTheDocument()
+  })
+
+  it('colors the glyph with the accent token separately from the label', () => {
+    render(<ModeIndicator mode="shallow" onOverride={vi.fn()} />)
+    expect(screen.getByText('●')).toHaveClass('text-accent')
+    expect(screen.getByText('Shallow')).not.toHaveClass('text-accent')
   })
 
   it('opens the popover on click', () => {
