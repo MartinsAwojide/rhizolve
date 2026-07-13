@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" font-family="Inter, sans-serif">
+  <title>Rhizolve logo — dark mode</title>
+  <!-- rhizome mark: root node branching orthogonally to a verified cause -->
+  <circle cx="28" cy="26" r="11" fill="none" stroke="#85B7EB" stroke-width="3"/>
+  <path d="M28,37 L28,58 L52,58 L52,70" fill="none" stroke="#8A857D" stroke-width="2.5"/>
+  <path d="M28,58 L14,58 L14,66" fill="none" stroke="#8A857D" stroke-width="2.5"/>
+  <circle cx="52" cy="74" r="7" fill="#F0997B"/>
+  <circle cx="14" cy="70" r="4" fill="none" stroke="#8A857D" stroke-width="2"/>
+  <text x="84" y="60" font-size="34" font-weight="500" fill="#F4F1EC">Rhizolve</text>
+</svg>
