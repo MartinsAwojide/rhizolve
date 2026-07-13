@@ -1,4 +1,6 @@
 import { Link } from 'react-router'
+import { MaturityMeter } from '../investigation/MaturityMeter'
+import { StatusDot } from '../investigation/StatusDot'
 
 export interface ProjectCardData {
   id: string
@@ -11,12 +13,6 @@ export interface ProjectCardData {
   memberCount: number
 }
 
-const STATUS_DOT_CLASS: Record<ProjectCardData['status'], string> = {
-  active: 'bg-project-status-active',
-  closed: 'border border-project-status-closed bg-transparent',
-  draft: 'bg-project-status-draft',
-}
-
 export function ProjectCard({ project }: { project: ProjectCardData }) {
   return (
     <Link
@@ -25,11 +21,7 @@ export function ProjectCard({ project }: { project: ProjectCardData }) {
     >
       <div className="flex items-center justify-between gap-sm">
         <h3 className="text-text-primary">{project.name}</h3>
-        <span
-          data-testid="status-dot"
-          data-status={project.status}
-          className={`h-3 w-3 rounded-pill ${STATUS_DOT_CLASS[project.status]}`}
-        />
+        <StatusDot status={project.status} />
       </div>
       {project.domain && (
         <span className="w-fit rounded-pill bg-surface-1 px-sm py-xs text-sm text-text-secondary">
@@ -46,7 +38,10 @@ export function ProjectCard({ project }: { project: ProjectCardData }) {
         </div>
         <div>
           <dt>Maturity</dt>
-          <dd>{project.maturityLevel}</dd>
+          <dd className="flex items-center gap-xs">
+            {project.maturityLevel}
+            <MaturityMeter level={project.maturityLevel} showLabel={false} />
+          </dd>
         </div>
         <div>
           <dt>Members</dt>
