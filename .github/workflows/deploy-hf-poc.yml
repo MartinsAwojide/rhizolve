@@ -29,12 +29,19 @@ jobs:
 
       - uses: astral-sh/setup-uv@v8.3.2
 
-      # huggingface/hub-sync@v0.1.0 always runs `hf repo create --exist-ok`
-      # before uploading, and HF's API validates SDK/hardware billing
-      # eligibility on that call even with --exist-ok — 402s for a
-      # non-PRO account regardless of the Space already existing. The
-      # Space is created manually (see huggingface/README.md prerequisites),
-      # so upload alone (no create call) is all this job needs.
+      # KNOWN BROKEN as of 2026-07-13 on a non-PRO HF account: both
+      # huggingface/hub-sync@v0.1.0's explicit `hf repo create --exist-ok`
+      # and `hf upload`'s own implicit create_repo(exist_ok=True) call
+      # 402 ("Docker Spaces on free cpu-basic require a PRO subscription")
+      # even though the Space already exists — HF's billing check fires
+      # on the create-repo API call regardless of exist_ok. Confirmed via
+      # two full workflow runs, not a CLI-flag fix. Two ways forward,
+      # neither implemented yet:
+      #   1. Get HF PRO on the account this Space lives under.
+      #   2. Switch this step to a git-push-based sync (clone/init a repo
+      #      pointed at the Space's own git remote, token-authed HTTPS,
+      #      commit + force-push) — bypasses the create-repo API path
+      #      entirely since it's a plain git push to an existing repo.
       - name: Upload to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}

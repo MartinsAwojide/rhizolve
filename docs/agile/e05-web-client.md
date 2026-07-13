@@ -556,7 +556,14 @@ route tree (`App.tsx`, `ProjectCreatePage`, `ProtectedRoute`) builds and
 serves with no placeholder text and no crash, using the real Vite dev
 server — but stops at the `/login` redirect, since asserting the real
 chat/why-tree render authenticated needs Clerk test-mode credentials
-this session doesn't have. T11 remains manual, unchanged from US-37.
+this session doesn't have. T11's manual Space-creation steps were done
+(Space `martinsawojide/rhizolve` created, `HF_TOKEN`/`HF_SPACE_ID`/Space
+secrets set), but `deploy-hf-poc.yml`'s sync step is **known broken on
+a non-PRO HF account** — see the comment block above the "Upload to
+Hugging Face Space" step in that workflow file for the confirmed root
+cause (HF's create-repo billing check fires on every sync attempt,
+`exist_ok` or not) and the two unimplemented ways forward (HF PRO, or
+switch to a git-push-based sync). Not resolved this session.
 No full authenticated manual walkthrough (sign in → create project →
 start investigation → submit review → see tree update → click-to-scroll)
 was performed this session for the same reason; flagging as open before
