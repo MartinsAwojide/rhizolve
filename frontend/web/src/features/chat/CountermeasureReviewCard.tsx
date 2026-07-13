@@ -25,18 +25,20 @@ export function CountermeasureReviewCard({
 
   return (
     <Card data-testid="countermeasure-review-card">
-      <p className="text-text-primary">{countermeasure}</p>
+      <p className="rounded-control border border-border bg-surface-1 p-sm font-voice text-text-primary">
+        {countermeasure}
+      </p>
 
       {mode === 'default' && (
         <div className="mt-md flex gap-sm">
-          <Button type="button" onClick={() => onSubmit({ accepted: true })}>
-            Accept
+          <Button type="button" variant="danger" onClick={() => setMode('rejecting')}>
+            Reject
           </Button>
           <Button type="button" variant="secondary" onClick={() => setMode('editing')}>
             Edit
           </Button>
-          <Button type="button" variant="secondary" onClick={() => setMode('rejecting')}>
-            Reject
+          <Button type="button" onClick={() => onSubmit({ accepted: true })}>
+            Accept
           </Button>
         </div>
       )}

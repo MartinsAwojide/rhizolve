@@ -42,4 +42,14 @@ describe('CountermeasureReviewCard', () => {
       feedback: 'Too costly, propose cheaper option',
     })
   })
+
+  it('renders the AI-authored countermeasure text in the serif voice', () => {
+    render(<CountermeasureReviewCard countermeasure="Replace belt monthly" onSubmit={vi.fn()} />)
+    expect(screen.getByText('Replace belt monthly')).toHaveClass('font-voice')
+  })
+
+  it('styles the reject button with the danger variant', () => {
+    render(<CountermeasureReviewCard countermeasure="Replace belt monthly" onSubmit={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /^reject$/i })).toHaveClass('text-danger')
+  })
 })
