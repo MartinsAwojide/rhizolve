@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 from collections.abc import AsyncIterator
 
@@ -50,6 +51,8 @@ async def stream_investigation(
                 next_task = asyncio.ensure_future(gen.__anext__())
         finally:
             next_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, StopAsyncIteration):
+                await next_task
             await gen.aclose()
 
     return StreamingResponse(

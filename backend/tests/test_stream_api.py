@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import uuid
 
 import pytest
@@ -104,6 +105,30 @@ async def test_stream_delivers_event_within_3s_of_publish(authed_client, stream_
         assert "node_update" in chunk
     finally:
         await response.body_iterator.aclose()
+
+
+@pytest.mark.asyncio
+async def test_stream_cancel_mid_wait_does_not_raise(authed_client, stream_env):
+    """Regression test: cancelling the stream (as happens when the client
+    disconnects, or the ASGI app is torn down mid-request) while
+    event_source() is suspended waiting on the next pubsub message must not
+    raise RuntimeError('aclose(): asynchronous generator is already
+    running') — see api/stream.py's event_source() finally block."""
+    project_id = await _create_project(authed_client)
+    investigation_id = await _start_investigation(stream_env, project_id)
+
+    response = await stream_investigation(
+        project_id, investigation_id, _FakeRequest(app), _member=None
+    )
+    # Start consuming so event_source() actually enters its wait loop with a
+    # pending next_task, then cancel mid-wait — no message is ever
+    # published, so next_task never resolves before we cancel.
+    pending = asyncio.ensure_future(response.body_iterator.__anext__())
+    await asyncio.sleep(0.1)
+
+    pending.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await pending
 
 
 @pytest.mark.asyncio
