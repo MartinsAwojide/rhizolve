@@ -5,22 +5,36 @@ import { useWhyTree } from './useWhyTree'
 import type { WhyNode } from '../chat/types'
 
 const authFetchMock = vi.fn()
+let unstableAuthFetch = false
 
+// useAuthFetch's identity can be unstable across renders in the real app (its
+// useCallback dep chains through Clerk's useAuth). Toggled on only for the
+// infinite-loop regression test below, which is what catches it.
 vi.mock('../../hooks/useAuthFetch', () => ({
-  useAuthFetch: () => authFetchMock,
+  useAuthFetch: () =>
+    unstableAuthFetch
+      ? (...args: Parameters<typeof authFetchMock>) => authFetchMock(...args)
+      : authFetchMock,
 }))
 
 class FakeEventSource {
   static instances: FakeEventSource[] = []
   onmessage: ((event: { data: string }) => void) | null = null
+  onerror: (() => void) | null = null
   url: string
+  closed = false
   constructor(url: string) {
     this.url = url
     FakeEventSource.instances.push(this)
   }
-  close() {}
+  close() {
+    this.closed = true
+  }
   emit(data: unknown) {
     this.onmessage?.({ data: JSON.stringify(data) })
+  }
+  triggerError() {
+    this.onerror?.()
   }
 }
 
@@ -37,6 +51,7 @@ const baseNode: WhyNode = {
 
 beforeEach(() => {
   authFetchMock.mockReset()
+  unstableAuthFetch = false
   FakeEventSource.instances = []
   vi.stubGlobal('EventSource', FakeEventSource)
 })
@@ -84,6 +99,40 @@ describe('useWhyTree', () => {
     })
 
     await waitFor(() => expect(result.current.nodes).toEqual([refetchedNode]))
+    expect(authFetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not fetch or open an EventSource when investigationId is empty', () => {
+    renderHook(() => useWhyTree('proj-1', ''))
+    expect(authFetchMock).not.toHaveBeenCalled()
+    expect(FakeEventSource.instances).toHaveLength(0)
+  })
+
+  it('does not loop forever re-rendering when investigationId is empty and authFetch is unstable', async () => {
+    unstableAuthFetch = true
+    let renderCount = 0
+    renderHook(() => {
+      renderCount += 1
+      return useWhyTree('proj-1', '')
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(renderCount).toBeLessThan(5)
+  })
+
+  it('refetches the tree via fallback when the EventSource errors', async () => {
+    authFetchMock.mockResolvedValueOnce([baseNode])
+    const { result } = renderHook(() => useWhyTree('proj-1', 'inv-1'))
+    await waitFor(() => expect(result.current.nodes).toEqual([baseNode]))
+
+    const recoveredNode = { ...baseNode, gemba_result: 'OK' as const }
+    authFetchMock.mockResolvedValueOnce([recoveredNode])
+    act(() => {
+      FakeEventSource.instances[0].triggerError()
+    })
+
+    await waitFor(() => expect(result.current.nodes).toEqual([recoveredNode]))
     expect(authFetchMock).toHaveBeenCalledTimes(2)
   })
 })

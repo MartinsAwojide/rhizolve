@@ -9,6 +9,7 @@ export interface ProjectListItem {
   description: string | null
   status: ProjectCardData['status']
   active_investigation_count: number
+  active_investigation_id: string | null
   maturity_level: number
   member_count: number
 }

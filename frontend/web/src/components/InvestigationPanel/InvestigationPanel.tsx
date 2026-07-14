@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { WhyNode } from '../../features/chat/types'
 import { WhyTree } from '../../features/investigation/WhyTree'
 import { useWhyTree } from '../../features/investigation/useWhyTree'
 import { NodeStatusMarker, type NodeStatus } from '../../features/investigation/NodeStatusMarker'
@@ -34,6 +35,7 @@ export function InvestigationPanel({
   const [internalTab, setInternalTab] = useState<Tab>('why-tree')
   const [legendOpen, setLegendOpen] = useState(false)
   const activeTab = controlledTab ?? internalTab
+  const { nodes } = useWhyTree(projectId, investigationId ?? '')
   const setActiveTab = (tab: Tab) => {
     if (onTabChange) {
       onTabChange(tab)
@@ -81,11 +83,7 @@ export function InvestigationPanel({
       <div role="tabpanel" className="flex-1 p-md text-text-muted">
         {activeTab === 'why-tree' ? (
           investigationId ? (
-            <WhyTree
-              projectId={projectId}
-              investigationId={investigationId}
-              onNodeClick={onNodeClick}
-            />
+            <WhyTree nodes={nodes} onNodeClick={onNodeClick} />
           ) : (
             'Start an investigation to see the why-tree'
           )
@@ -94,13 +92,12 @@ export function InvestigationPanel({
         )}
       </div>
 
-      {investigationId && <TreeFooter projectId={projectId} investigationId={investigationId} />}
+      {investigationId && <TreeFooter nodes={nodes} />}
     </div>
   )
 }
 
-function TreeFooter({ projectId, investigationId }: { projectId: string; investigationId: string }) {
-  const { nodes } = useWhyTree(projectId, investigationId)
+function TreeFooter({ nodes }: { nodes: WhyNode[] }) {
   if (nodes.length === 0) return null
 
   const rootCauseCount = nodes.filter((n) => n.is_root_cause).length

@@ -1,19 +1,17 @@
 import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useWhyTree } from './useWhyTree'
+import type { WhyNode as WhyNodeData } from '../chat/types'
 import { buildTreeLayout } from './layout'
 import { WhyNode } from './WhyNode'
 
 const nodeTypes = { whyNode: WhyNode }
 
 type WhyTreeProps = {
-  projectId: string
-  investigationId: string
+  nodes: WhyNodeData[]
   onNodeClick?: (nodeId: string) => void
 }
 
-export function WhyTree({ projectId, investigationId, onNodeClick }: WhyTreeProps) {
-  const { nodes } = useWhyTree(projectId, investigationId)
+export function WhyTree({ nodes, onNodeClick }: WhyTreeProps) {
   const { nodes: xyNodes, edges } = buildTreeLayout(nodes)
 
   return (

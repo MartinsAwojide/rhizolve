@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { InvestigationPanel } from './InvestigationPanel'
 
 const useWhyTreeMock = vi.fn()
@@ -7,6 +7,11 @@ const useWhyTreeMock = vi.fn()
 vi.mock('../../features/investigation/useWhyTree', () => ({
   useWhyTree: (...args: unknown[]) => useWhyTreeMock(...args),
 }))
+
+beforeEach(() => {
+  useWhyTreeMock.mockReset()
+  useWhyTreeMock.mockReturnValue({ nodes: [] })
+})
 
 describe('InvestigationPanel', () => {
   it('renders the report placeholder when no investigation exists', () => {
@@ -20,6 +25,12 @@ describe('InvestigationPanel', () => {
     useWhyTreeMock.mockReturnValue({ nodes: [] })
     render(<InvestigationPanel projectId="proj-1" investigationId="inv-1" />)
     expect(useWhyTreeMock).toHaveBeenCalledWith('proj-1', 'inv-1')
+  })
+
+  it('calls useWhyTree exactly once, shared between the tree view and the footer', () => {
+    useWhyTreeMock.mockReturnValue({ nodes: [] })
+    render(<InvestigationPanel projectId="proj-1" investigationId="inv-1" />)
+    expect(useWhyTreeMock).toHaveBeenCalledTimes(1)
   })
 
   it('switches to the report tab on click', () => {

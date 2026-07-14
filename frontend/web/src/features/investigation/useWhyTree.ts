@@ -14,6 +14,7 @@ export function useWhyTree(projectId: string, investigationId: string) {
   const [nodes, setNodes] = useState<WhyNode[]>([])
 
   const fetchTree = useCallback(async () => {
+    if (!investigationId) return
     const data: WhyNode[] = await authFetch(
       `/api/v1/projects/${projectId}/investigations/${investigationId}/tree`,
     )
@@ -21,13 +22,21 @@ export function useWhyTree(projectId: string, investigationId: string) {
   }, [authFetch, projectId, investigationId])
 
   useEffect(() => {
+    if (!investigationId) {
+      setNodes((prev) => (prev.length === 0 ? prev : []))
+      return
+    }
     fetchTree()
-  }, [fetchTree])
+  }, [fetchTree, investigationId])
 
   useEffect(() => {
+    if (!investigationId) return
     const source = new EventSource(
       `/api/v1/projects/${projectId}/investigations/${investigationId}/stream`,
     )
+    source.onerror = () => {
+      fetchTree()
+    }
     source.onmessage = (event) => {
       const parsed: NodeUpdateEvent = JSON.parse(event.data)
       if (parsed.type !== 'node_update') return
