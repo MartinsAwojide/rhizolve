@@ -92,3 +92,12 @@ class InvestigationStatusOut(BaseModel):
     )
     pending_hypotheses: list[dict[str, Any]]
     node: WhyNodeOut | None
+
+
+class ReportOut(BaseModel):
+    investigation_id: str
+    phenomenon: str
+    domain: str
+    why_nodes: list[WhyNodeOut]
+    root_cause: str | None
+    countermeasure: str | None

@@ -280,6 +280,22 @@ class FiveWhysAgent:
         snapshot = await self.graph.aget_state(config)
         return snapshot.values.get("why_nodes", [])
 
+    async def get_report(self, investigation_id: str) -> dict[str, Any]:
+        config = await self._config(investigation_id)
+        snapshot = await self.graph.aget_state(config)
+        why_nodes = snapshot.values.get("why_nodes", [])
+        root_cause_node = next((n for n in why_nodes if n["is_root_cause"]), None)
+        return {
+            "investigation_id": investigation_id,
+            "phenomenon": snapshot.values.get("phenomenon", ""),
+            "domain": snapshot.values.get("domain", ""),
+            "why_nodes": why_nodes,
+            "root_cause": root_cause_node["hypothesis"] if root_cause_node else None,
+            "countermeasure": (
+                root_cause_node["countermeasure"] if root_cause_node else None
+            ),
+        }
+
     async def inject_context(self, thread_id: str, context: str) -> None:
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
         snapshot = await self.graph.aget_state(config)

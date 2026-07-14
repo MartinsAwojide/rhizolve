@@ -88,7 +88,7 @@ export function InvestigationPanel({
             'Start an investigation to see the why-tree'
           )
         ) : (
-          <ReportScreen />
+          <ReportScreen projectId={projectId} investigationId={investigationId ?? ''} />
         )}
       </div>
 

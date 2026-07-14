@@ -177,6 +177,45 @@ async def test_get_tree_returns_current_why_nodes(agent):
 
 
 @pytest.mark.asyncio
+async def test_get_report_returns_phenomenon_domain_root_cause_and_countermeasure(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+        max_depth=1,
+    )
+    investigation_id = started["investigation_id"]
+    await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
+    await agent.submit_validator_review(investigation_id, user_override_root_cause=True)
+    await agent.submit_countermeasure_review(
+        investigation_id, accepted=True, edit="replace the seal immediately"
+    )
+
+    report = await agent.get_report(investigation_id)
+
+    assert report["phenomenon"] == "Glue overflowed"
+    assert report["domain"] == "manufacturing"
+    assert [n["branch_path"] for n in report["why_nodes"]] == ["root.h1"]
+    assert report["root_cause"] == "seal wear on the fill valve"
+    assert report["countermeasure"] == "replace the seal immediately"
+
+
+@pytest.mark.asyncio
+async def test_get_report_has_no_root_cause_or_countermeasure_before_one_is_found(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+
+    report = await agent.get_report(investigation_id)
+
+    assert report["root_cause"] is None
+    assert report["countermeasure"] is None
+
+
+@pytest.mark.asyncio
 async def test_get_tree_reflects_gemba_result_after_submission(agent):
     started = await agent.start_investigation(
         phenomenon="Glue overflowed",

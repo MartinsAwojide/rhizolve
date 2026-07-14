@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent.schemas import WhyNodeOut
+from agent.schemas import ReportOut, WhyNodeOut
 from api.middleware.scope import get_project_member
 from core.db import get_db_session
 from models.conflict import Conflict, ConflictStatus
@@ -35,3 +35,21 @@ async def get_tree(
         WhyNodeOut(**node, conflict=node["branch_path"] in conflicted_branches)
         for node in why_nodes
     ]
+
+
+@router.get("/{project_id}/investigations/{investigation_id}/report")
+async def get_report(
+    investigation_id: str,
+    request: Request,
+    _member: ProjectMember = Depends(get_project_member),
+) -> ReportOut:
+    agent = request.app.state.five_whys_agent
+    report = await agent.get_report(investigation_id)
+    return ReportOut(
+        investigation_id=report["investigation_id"],
+        phenomenon=report["phenomenon"],
+        domain=report["domain"],
+        why_nodes=[WhyNodeOut(**node) for node in report["why_nodes"]],
+        root_cause=report["root_cause"],
+        countermeasure=report["countermeasure"],
+    )
