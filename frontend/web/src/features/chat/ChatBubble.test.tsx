@@ -33,4 +33,26 @@ describe('ChatBubble', () => {
     expect(bubble).toHaveAttribute('data-role', 'system')
     expect(bubble).toHaveClass('text-center', 'text-text-muted', 'text-xs')
   })
+
+  it('right-aligns and tints a user message', () => {
+    render(<ChatBubble role="user" content="hi" />)
+    const row = screen.getByTestId('chat-bubble-row')
+    const bubble = screen.getByTestId('chat-bubble')
+    expect(row).toHaveClass('justify-end')
+    expect(bubble).toHaveClass('font-sans')
+    expect(bubble.className).toMatch(/accent/)
+  })
+
+  it('left-aligns an assistant message in the serif voice', () => {
+    render(<ChatBubble role="assistant" content="hi" />)
+    const row = screen.getByTestId('chat-bubble-row')
+    const bubble = screen.getByTestId('chat-bubble')
+    expect(row).toHaveClass('justify-start')
+    expect(bubble).toHaveClass('font-voice')
+  })
+
+  it('shows the sender name above the bubble when provided', () => {
+    render(<ChatBubble role="user" content="hi" name="A. Rivera" />)
+    expect(screen.getByText('A. Rivera')).toBeInTheDocument()
+  })
 })

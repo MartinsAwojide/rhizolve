@@ -32,7 +32,7 @@ export type WhyNode = {
 }
 
 export type ChatMessage =
-  | { type: 'shallow'; role: 'user' | 'assistant' | 'system'; content: string }
+  | { type: 'shallow'; role: 'user' | 'assistant' | 'system'; content: string; name?: string }
   | { type: 'interrupt'; interrupt_type: 'hypothesis_review'; hypotheses: PendingHypothesis[] }
   | { type: 'interrupt'; interrupt_type: 'gemba_result_review'; node: WhyNode }
   | { type: 'interrupt'; interrupt_type: 'validator_review'; node: WhyNode; confidence?: number }

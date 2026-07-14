@@ -32,7 +32,14 @@ export function ChatThread({
     <div className="flex flex-col gap-md">
       {messages.map((message, index) => {
         if (message.type === 'shallow') {
-          return <ChatBubble key={index} role={message.role} content={message.content} />
+          return (
+            <ChatBubble
+              key={index}
+              role={message.role}
+              content={message.content}
+              name={message.name}
+            />
+          )
         }
 
         switch (message.interrupt_type) {
