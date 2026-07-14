@@ -69,7 +69,7 @@ def _base(project_id: str, investigation_id: str) -> str:
 
 
 async def _close_root_h1_then_rewind_active(agent, investigation_id: str) -> None:
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     closed_node = next(
         n
         for n in (await agent.graph.aget_state(config)).values["why_nodes"]
@@ -205,7 +205,7 @@ async def test_resolve_conflict_reset_calls_agent_reset_tree(
     )
     assert r2.status_code == 200
 
-    config = conflict_env._config(investigation_id)
+    config = await conflict_env._config(investigation_id)
     snapshot = await conflict_env.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"

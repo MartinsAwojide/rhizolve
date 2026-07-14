@@ -59,14 +59,26 @@ class FiveWhysAgent:
         self._pubsub = pubsub
         self._db_sessionmaker = db_sessionmaker
 
-    def _config(self, investigation_id: str) -> RunnableConfig:
-        project_id = self._project_ids[investigation_id]
+    async def _resolve_project_id(self, investigation_id: str) -> str:
+        if investigation_id in self._project_ids:
+            return self._project_ids[investigation_id]
+        if self._db_sessionmaker is None:
+            raise KeyError(investigation_id)
+        async with self._db_sessionmaker() as session:
+            investigation = await session.get(Investigation, investigation_id)
+        if investigation is None:
+            raise KeyError(investigation_id)
+        self._project_ids[investigation_id] = investigation.project_id
+        return investigation.project_id
+
+    async def _config(self, investigation_id: str) -> RunnableConfig:
+        project_id = await self._resolve_project_id(investigation_id)
         return {"configurable": {"thread_id": f"{project_id}:{investigation_id}"}}
 
     async def _run_and_publish(
         self, config: RunnableConfig, investigation_id: str, input_state: Any = None
     ) -> None:
-        project_id = self._project_ids[investigation_id]
+        project_id = await self._resolve_project_id(investigation_id)
         async for chunk in self.graph.astream(
             input_state, config, stream_mode="updates"
         ):
@@ -95,7 +107,7 @@ class FiveWhysAgent:
     ) -> dict[str, Any]:
         investigation_id = str(uuid.uuid4())
         self._project_ids[investigation_id] = project_id
-        config = self._config(investigation_id)
+        config = await self._config(investigation_id)
         await self._run_and_publish(
             config,
             investigation_id,
@@ -117,11 +129,11 @@ class FiveWhysAgent:
     async def submit_gemba(
         self,
         investigation_id: str,
-        result: Literal["OK", "NOK"],
+        result: Literal["OK", "NOK", "ROOT_CAUSE"],
         notes: str = "",
         attachments: list[Attachment] | None = None,
     ) -> dict[str, Any]:
-        config = self._config(investigation_id)
+        config = await self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
         if snapshot.next == ("gemba_dispatcher",):
             await self._run_and_publish(config, investigation_id)
@@ -163,7 +175,7 @@ class FiveWhysAgent:
         user_override_root_cause: bool,
         user_probe_direction: str | None = None,
     ) -> dict[str, Any]:
-        config = self._config(investigation_id)
+        config = await self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
         node = _find_active_node(snapshot)
 
@@ -188,7 +200,7 @@ class FiveWhysAgent:
         edit: str | None = None,
         feedback: str | None = None,
     ) -> dict[str, Any]:
-        config = self._config(investigation_id)
+        config = await self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
         node = _find_active_node(snapshot)
 
@@ -215,7 +227,7 @@ class FiveWhysAgent:
         hypotheses: list[dict[str, Any]] | None = None,
         regenerate_with_context: str | None = None,
     ) -> dict[str, Any]:
-        config = self._config(investigation_id)
+        config = await self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
 
         if regenerate_with_context:
@@ -244,7 +256,7 @@ class FiveWhysAgent:
         branch_path: str,
         reset_type: Literal["soft", "hard"],
     ) -> dict[str, Any]:
-        config = self._config(investigation_id)
+        config = await self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
         tree = _why_nodes_to_tree(snapshot.values["why_nodes"])
         reset_fn = soft_reset if reset_type == "soft" else hard_reset
@@ -264,7 +276,7 @@ class FiveWhysAgent:
         return await self._status(investigation_id)
 
     async def get_tree(self, investigation_id: str) -> list[WhyNode]:
-        config = self._config(investigation_id)
+        config = await self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
         return snapshot.values.get("why_nodes", [])
 
@@ -282,8 +294,16 @@ class FiveWhysAgent:
         return await self._status(investigation_id)
 
     async def _status(self, investigation_id: str) -> dict[str, Any]:
-        config = self._config(investigation_id)
+        config = await self._config(investigation_id)
         snapshot = await self.graph.aget_state(config)
+        if snapshot.next and _INTERRUPT_TYPES.get(snapshot.next[0]) is None:
+            # snapshot.next points at a node that isn't a user-facing
+            # interrupt point, meaning it crashed mid-execution (e.g. a
+            # transient LLM/provider failure) and never advanced. Retry it
+            # rather than permanently reporting no interrupt_type with no
+            # way for the investigation to recover.
+            await self._run_and_publish(config, investigation_id)
+            snapshot = await self.graph.aget_state(config)
         if not snapshot.next:
             result = {
                 "investigation_id": investigation_id,

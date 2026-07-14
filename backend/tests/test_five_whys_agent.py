@@ -94,7 +94,7 @@ async def test_submit_gemba_advances_past_dispatch_and_records_result(agent):
 
     await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -102,6 +102,29 @@ async def test_submit_gemba_advances_past_dispatch_and_records_result(agent):
     assert node["gemba_result"] == "NOK"
     assert node["gemba_notes"] == "seal cracked"
     assert snapshot.next != ("gemba_check",)
+
+
+@pytest.mark.asyncio
+async def test_submit_gemba_accepts_root_cause_result_and_reaches_validator_review(agent):
+    started = await agent.start_investigation(
+        phenomenon="Glue overflowed",
+        domain="manufacturing",
+        system_or_process_context="glue tank fill station, line 3",
+    )
+    investigation_id = started["investigation_id"]
+
+    result = await agent.submit_gemba(
+        investigation_id, result="ROOT_CAUSE", notes="calibration drift confirmed"
+    )
+
+    assert result["interrupt_type"] == "validator_review"
+    config = await agent._config(investigation_id)
+    snapshot = await agent.graph.aget_state(config)
+    node = next(
+        n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
+    )
+    assert node["gemba_result"] == "ROOT_CAUSE"
+    assert node["gemba_notes"] == "calibration drift confirmed"
 
 
 @pytest.mark.asyncio
@@ -194,7 +217,7 @@ async def test_submit_gemba_with_attachments_persists_on_node(agent):
         investigation_id, result="NOK", notes="seal cracked", attachments=attachments
     )
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -213,7 +236,7 @@ async def test_submit_gemba_flags_conflict_instead_of_overwriting_closed_branch(
 
     await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     closed_node = next(
         n
         for n in (await agent.graph.aget_state(config)).values["why_nodes"]
@@ -304,7 +327,7 @@ async def test_submit_validator_review_override_forces_countermeasure(agent):
     )
     assert result["interrupt_type"] == "countermeasure_review"
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -328,7 +351,7 @@ async def test_submit_validator_review_without_override_keeps_ai_decision(agent)
     )
     assert result["interrupt_type"] == "hypothesis_review"
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -353,7 +376,7 @@ async def test_submit_validator_review_probe_direction_reaches_why_generator(age
         user_probe_direction="check the upstream regulator too",
     )
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     assert "check the upstream regulator too" in snapshot.values["domain_context"]
 
@@ -384,7 +407,7 @@ async def test_submit_countermeasure_review_accepted_with_edit_overwrites_counte
     )
     assert result["status"] == "complete"
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -408,7 +431,7 @@ async def test_submit_countermeasure_review_rejected_regenerates_with_feedback(
         investigation_id, user_override_root_cause=False
     )
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -481,7 +504,7 @@ async def test_submit_hypothesis_review_regenerates_with_context():
             investigation_id = started["investigation_id"]
             assert started["interrupt_type"] == "hypothesis_review"
 
-            config = regen_agent._config(investigation_id)
+            config = await regen_agent._config(investigation_id)
             before = await regen_agent.graph.aget_state(config)
             depth_before = before.values["current_depth"]
             branch_before = before.values["current_branch_path"]
@@ -537,7 +560,7 @@ async def test_submit_hypothesis_review_edits_pending_list(agent):
     gemba_result = await agent.submit_gemba(
         investigation_id, result="NOK", notes="confirmed"
     )
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -574,7 +597,7 @@ async def test_reset_tree_soft_suspends_descendants_via_agent(agent):
 
     await agent.reset_tree(investigation_id, "root.h1", "soft")
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -594,7 +617,7 @@ async def test_reset_tree_hard_deletes_descendants_via_agent(agent):
 
     await agent.reset_tree(investigation_id, "root.h1", "hard")
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -614,7 +637,7 @@ async def test_reset_tree_moves_head_pointer(agent):
 
     await agent.reset_tree(investigation_id, "root.h1", "soft")
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     assert snapshot.values["current_branch_path"] == "root.h1"
 
@@ -629,7 +652,7 @@ async def test_reset_tree_moves_current_depth_to_target_node_depth(agent):
     investigation_id = started["investigation_id"]
     await agent.submit_gemba(investigation_id, result="NOK", notes="seal cracked")
 
-    config = agent._config(investigation_id)
+    config = await agent._config(investigation_id)
     snapshot = await agent.graph.aget_state(config)
     target_node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -660,9 +683,48 @@ async def test_start_investigation_tracks_project_id_for_later_calls(agent):
 
     await agent.submit_gemba(investigation_id, result="OK", notes="fine")
 
-    assert agent._config(investigation_id)["configurable"]["thread_id"] == (
-        f"proj-042:{investigation_id}"
+    config = await agent._config(investigation_id)
+    assert config["configurable"]["thread_id"] == f"proj-042:{investigation_id}"
+
+
+@pytest.mark.asyncio
+async def test_status_retries_a_node_that_crashed_mid_execution(monkeypatch):
+    monkeypatch.setattr("agent.graph.why_generator", _pinned_why_generator)
+    monkeypatch.setattr(
+        "agent.graph.countermeasure_generator", _pinned_countermeasure_generator
     )
+    calls = {"n": 0}
+
+    async def flaky_root_cause_validator(state):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("transient failure")
+        return await _pinned_root_cause_validator(state)
+
+    monkeypatch.setattr("agent.graph.root_cause_validator", flaky_root_cause_validator)
+
+    checkpointer, ctx = await make_checkpointer()
+    try:
+        test_agent = FiveWhysAgent(checkpointer)
+        started = await test_agent.start_investigation(
+            phenomenon="Glue overflowed",
+            domain="manufacturing",
+            system_or_process_context="glue tank fill station, line 3",
+        )
+        investigation_id = started["investigation_id"]
+
+        with pytest.raises(RuntimeError):
+            await test_agent.submit_gemba(
+                investigation_id, result="NOK", notes="seal cracked"
+            )
+
+        # The node crashed mid-execution (a transient failure) and the graph
+        # never advanced past it. A later status poll must retry it rather
+        # than permanently reporting no interrupt_type with no way to recover.
+        status = await test_agent.get_status(investigation_id)
+        assert status["interrupt_type"] is not None
+    finally:
+        await ctx.__aexit__(None, None, None)
 
 
 @pytest.fixture
@@ -761,3 +823,33 @@ async def test_agent_without_sessionmaker_does_not_write_investigation_row(agent
     await engine.dispose()
 
     assert row is None
+
+
+@pytest.mark.asyncio
+async def test_status_recovers_project_id_from_db_after_process_restart(
+    monkeypatch, db_sessionmaker, project_id
+):
+    monkeypatch.setattr("agent.graph.why_generator", _pinned_why_generator)
+    checkpointer, ctx = await make_checkpointer()
+    try:
+        first_agent = FiveWhysAgent(checkpointer, db_sessionmaker=db_sessionmaker)
+        started = await first_agent.start_investigation(
+            phenomenon="Glue overflowed",
+            domain="manufacturing",
+            system_or_process_context="glue tank fill station, line 3",
+            project_id=project_id,
+        )
+        investigation_id = started["investigation_id"]
+
+        # Simulate a fresh process (e.g. after a restart, or a URL visited
+        # directly): a new agent instance with an empty in-memory project-id
+        # cache, sharing only the durable checkpointer and database.
+        second_agent = FiveWhysAgent(checkpointer, db_sessionmaker=db_sessionmaker)
+
+        status = await second_agent.get_status(investigation_id)
+        assert status["investigation_id"] == investigation_id
+
+        tree = await second_agent.get_tree(investigation_id)
+        assert tree == []
+    finally:
+        await ctx.__aexit__(None, None, None)

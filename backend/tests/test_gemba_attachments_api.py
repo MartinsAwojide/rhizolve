@@ -199,7 +199,7 @@ async def test_attachment_persists_on_why_node(authed_client, gemba_env):
         files=[("files", ("audio.m4a", b"fake-audio-bytes", "audio/m4a"))],
     )
 
-    config = gemba_env._config(investigation_id)
+    config = await gemba_env._config(investigation_id)
     snapshot = await gemba_env.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"

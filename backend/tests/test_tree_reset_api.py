@@ -94,7 +94,7 @@ async def test_driver_can_soft_reset_and_audit_row_created(
         assert row.branch_path == "root.h1"
         assert row.evidence_reference == "photo-1"
 
-    config = reset_env._config(investigation_id)
+    config = await reset_env._config(investigation_id)
     snapshot = await reset_env.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -118,7 +118,7 @@ async def test_driver_can_hard_reset(authed_client, reset_env):
     )
     assert r.status_code == 200
 
-    config = reset_env._config(investigation_id)
+    config = await reset_env._config(investigation_id)
     snapshot = await reset_env.graph.aget_state(config)
     node = next(
         n for n in snapshot.values["why_nodes"] if n["branch_path"] == "root.h1"
@@ -199,7 +199,7 @@ async def test_reset_moves_current_branch_path(authed_client, reset_env):
     )
     assert r.status_code == 200
 
-    config = reset_env._config(investigation_id)
+    config = await reset_env._config(investigation_id)
     snapshot = await reset_env.graph.aget_state(config)
     assert snapshot.values["current_branch_path"] == "root.h1"
     node = next(
