@@ -73,4 +73,11 @@ describe('ProjectDashboardPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign out/i }))
     expect(signOutMock).toHaveBeenCalled()
   })
+
+  it('uses a responsive project-card grid matching AppLayout breakpoints', async () => {
+    server.use(http.get('/api/v1/projects', () => HttpResponse.json([])))
+    renderPage()
+    const grid = await screen.findByTestId('project-card-grid')
+    expect(grid).toHaveClass('grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-2', 'xl:grid-cols-3')
+  })
 })

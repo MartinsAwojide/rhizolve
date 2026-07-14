@@ -53,4 +53,13 @@ describe('MetricsRow', () => {
     renderRow()
     expect(await screen.findAllByText('—')).toHaveLength(2)
   })
+
+  it('uses a responsive grid matching AppLayout breakpoints', () => {
+    server.use(
+      http.get('/api/v1/dashboard/metrics', () => HttpResponse.json({})),
+    )
+    const { container } = renderRow()
+    const grid = container.firstElementChild
+    expect(grid).toHaveClass('grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-2', 'xl:grid-cols-4')
+  })
 })

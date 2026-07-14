@@ -31,7 +31,7 @@ export function ProjectCard({ project }: { project: ProjectCardData }) {
       {project.description && (
         <p className="text-sm text-text-secondary">{project.description}</p>
       )}
-      <dl className="flex gap-lg text-sm text-text-muted">
+      <dl className="flex flex-wrap gap-x-md gap-y-xs text-sm text-text-muted">
         <div>
           <dt>Active investigations</dt>
           <dd>{project.activeInvestigationCount}</dd>

@@ -25,7 +25,7 @@ export function MetricsRow() {
   })
 
   return (
-    <div className="grid grid-cols-4 gap-md">
+    <div className="grid grid-cols-1 gap-md sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-4">
       <Stat label="Active investigations" value={String(data?.active_investigations ?? 0)} />
       <Stat label="Root causes found" value={String(data?.root_causes_found ?? 0)} />
       <Stat

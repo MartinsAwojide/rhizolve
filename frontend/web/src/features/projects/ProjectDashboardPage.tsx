@@ -43,21 +43,24 @@ export function ProjectDashboardPage() {
         </div>
       </div>
       <div className="flex gap-lg p-lg">
-      <div className="flex flex-1 flex-col gap-lg">
-        <MetricsRow />
-        <div className="grid grid-cols-3 gap-md">
-          {projects?.map((project) => (
-            <ProjectCard key={project.id} project={toCardData(project)} />
-          ))}
-          <Link
-            to="/projects/new"
-            className="flex items-center justify-center rounded-card border border-dashed border-text-muted p-md text-text-muted"
+        <div className="flex min-w-0 flex-1 flex-col gap-lg">
+          <MetricsRow />
+          <div
+            data-testid="project-card-grid"
+            className="grid grid-cols-1 gap-md sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3"
           >
-            New project
-          </Link>
+            {projects?.map((project) => (
+              <ProjectCard key={project.id} project={toCardData(project)} />
+            ))}
+            <Link
+              to="/projects/new"
+              className="flex items-center justify-center rounded-card border border-dashed border-text-muted p-md text-text-muted"
+            >
+              New project
+            </Link>
+          </div>
         </div>
-      </div>
-      <NeedsAttentionRail />
+        <NeedsAttentionRail />
       </div>
     </div>
   )

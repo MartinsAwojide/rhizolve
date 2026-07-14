@@ -29,12 +29,12 @@ export function NeedsAttentionRail() {
   })
 
   return (
-    <aside aria-label="Needs attention" className="flex flex-col gap-sm p-md">
+    <aside aria-label="Needs attention" className="flex w-64 shrink-0 flex-col gap-sm p-md">
       {data?.conflicts?.map((c) => (
         <Link
           key={`conflict-${c.id}`}
           to={`/projects/${c.project_id}`}
-          className="text-sm text-text-secondary"
+          className="truncate text-sm text-text-secondary"
         >
           Conflict on branch {c.branch_path} ({c.investigation_id})
         </Link>
@@ -43,7 +43,7 @@ export function NeedsAttentionRail() {
         <Link
           key={`quorum-${q.investigation_id}`}
           to={`/projects/${q.project_id}`}
-          className="text-sm text-text-secondary"
+          className="truncate text-sm text-text-secondary"
         >
           Awaiting quorum: {q.investigation_id}
         </Link>
