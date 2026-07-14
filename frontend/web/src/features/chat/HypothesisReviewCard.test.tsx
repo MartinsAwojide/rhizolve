@@ -64,4 +64,10 @@ describe('HypothesisReviewCard', () => {
     expect(screen.getByText('1')).toHaveClass('font-mono')
     expect(screen.getByText('2')).toHaveClass('font-mono')
   })
+
+  it('renders each hypothesis field using the shared Input component styling', () => {
+    render(<HypothesisReviewCard hypotheses={mockHypotheses} onSubmit={vi.fn()} />)
+    const field = screen.getByDisplayValue('Belt worn out')
+    expect(field.closest('span')).toHaveClass('focus-within:ring-ring/40')
+  })
 })

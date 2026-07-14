@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
 
 type CountermeasureAction = {
   accepted: boolean
@@ -10,7 +11,7 @@ type CountermeasureAction = {
 
 type CountermeasureReviewCardProps = {
   countermeasure: string
-  onSubmit: (action: CountermeasureAction) => void
+  onSubmit: (action: CountermeasureAction) => void | Promise<void>
 }
 
 type Mode = 'default' | 'editing' | 'rejecting'
@@ -22,6 +23,7 @@ export function CountermeasureReviewCard({
   const [mode, setMode] = useState<Mode>('default')
   const [editText, setEditText] = useState(countermeasure)
   const [feedback, setFeedback] = useState('')
+  const [submitted, setSubmitted] = useState(false)
 
   return (
     <Card data-testid="countermeasure-review-card">
@@ -37,7 +39,14 @@ export function CountermeasureReviewCard({
           <Button type="button" variant="secondary" onClick={() => setMode('editing')}>
             Edit
           </Button>
-          <Button type="button" onClick={() => onSubmit({ accepted: true })}>
+          <Button
+            type="button"
+            disabled={submitted}
+            onClick={() => {
+              setSubmitted(true)
+              Promise.resolve(onSubmit({ accepted: true })).catch(() => setSubmitted(false))
+            }}
+          >
             Accept
           </Button>
         </div>
@@ -45,19 +54,23 @@ export function CountermeasureReviewCard({
 
       {mode === 'editing' && (
         <div className="mt-md">
-          <label className="block text-text-secondary" htmlFor="countermeasure-edit">
-            Edit countermeasure
-            <textarea
-              id="countermeasure-edit"
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              className="mt-xs block w-full rounded-control bg-surface-1 p-sm text-text-primary"
-            />
-          </label>
+          <Input
+            as="textarea"
+            id="countermeasure-edit"
+            label="Edit countermeasure"
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+          />
           <Button
             type="button"
             className="mt-sm"
-            onClick={() => onSubmit({ accepted: true, edit: editText })}
+            disabled={submitted}
+            onClick={() => {
+              setSubmitted(true)
+              Promise.resolve(onSubmit({ accepted: true, edit: editText })).catch(() =>
+                setSubmitted(false),
+              )
+            }}
           >
             Save edit
           </Button>
@@ -66,19 +79,23 @@ export function CountermeasureReviewCard({
 
       {mode === 'rejecting' && (
         <div className="mt-md">
-          <label className="block text-text-secondary" htmlFor="countermeasure-feedback">
-            Feedback
-            <textarea
-              id="countermeasure-feedback"
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              className="mt-xs block w-full rounded-control bg-surface-1 p-sm text-text-primary"
-            />
-          </label>
+          <Input
+            as="textarea"
+            id="countermeasure-feedback"
+            label="Feedback"
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+          />
           <Button
             type="button"
             className="mt-sm"
-            onClick={() => onSubmit({ accepted: false, feedback })}
+            disabled={submitted}
+            onClick={() => {
+              setSubmitted(true)
+              Promise.resolve(onSubmit({ accepted: false, feedback })).catch(() =>
+                setSubmitted(false),
+              )
+            }}
           >
             Send feedback
           </Button>

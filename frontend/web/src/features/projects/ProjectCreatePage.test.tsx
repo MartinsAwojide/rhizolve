@@ -48,4 +48,12 @@ describe('ProjectCreatePage', () => {
 
     await vi.waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/projects/proj-new'))
   })
+
+  it('renders the name and domain fields using the shared Input component styling', () => {
+    renderPage()
+    expect(screen.getByLabelText(/name/i).closest('span')).toHaveClass('focus-within:ring-ring/40')
+    expect(screen.getByLabelText(/domain/i).closest('span')).toHaveClass(
+      'focus-within:ring-ring/40',
+    )
+  })
 })

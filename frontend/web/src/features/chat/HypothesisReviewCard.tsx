@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
 import type { PendingHypothesis } from './types'
 
 type HypothesisReviewCardProps = {
   hypotheses: PendingHypothesis[]
-  onSubmit: (edited: PendingHypothesis[]) => void
+  onSubmit: (edited: PendingHypothesis[]) => void | Promise<void>
 }
 
 const BLANK_HYPOTHESIS: PendingHypothesis = {
@@ -17,6 +18,7 @@ const BLANK_HYPOTHESIS: PendingHypothesis = {
 
 export function HypothesisReviewCard({ hypotheses, onSubmit }: HypothesisReviewCardProps) {
   const [items, setItems] = useState(hypotheses)
+  const [submitted, setSubmitted] = useState(false)
 
   function updateHypothesis(index: number, hypothesis: string) {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, hypothesis } : item)))
@@ -54,11 +56,15 @@ export function HypothesisReviewCard({ hypotheses, onSubmit }: HypothesisReviewC
         {items.map((item, index) => (
           <li key={`${item.branch_path}-${index}`} className="flex items-center gap-sm">
             <span className="font-mono text-xs text-text-muted">{index + 1}</span>
-            <input
+            <Input
               type="text"
+              id={`hypothesis-${index}`}
+              name={`hypothesis-${index}`}
+              aria-label={`Hypothesis ${index + 1}`}
+              title={item.hypothesis}
               value={item.hypothesis}
               onChange={(e) => updateHypothesis(index, e.target.value)}
-              className="flex-1 rounded-control bg-surface-1 px-sm py-xs font-voice text-text-primary"
+              className="flex-1 font-voice"
             />
             <Button
               type="button"
@@ -91,7 +97,14 @@ export function HypothesisReviewCard({ hypotheses, onSubmit }: HypothesisReviewC
         <Button type="button" variant="secondary" onClick={addBlank}>
           Add hypothesis
         </Button>
-        <Button type="button" onClick={() => onSubmit(items)}>
+        <Button
+          type="button"
+          disabled={submitted}
+          onClick={() => {
+            setSubmitted(true)
+            Promise.resolve(onSubmit(items)).catch(() => setSubmitted(false))
+          }}
+        >
           Submit
         </Button>
       </div>

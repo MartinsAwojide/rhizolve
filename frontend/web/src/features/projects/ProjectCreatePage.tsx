@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
 import { useAuthFetch } from '../../hooks/useAuthFetch'
 
 export function ProjectCreatePage() {
@@ -22,27 +23,21 @@ export function ProjectCreatePage() {
 
   return (
     <div className="p-lg">
-      <form onSubmit={handleSubmit} className="flex max-w-sm flex-col gap-sm">
-        <label htmlFor="name" className="text-sm text-text-secondary">
-          Name
-        </label>
-        <input
+      <form onSubmit={handleSubmit} className="flex max-w-[24rem] flex-col gap-sm">
+        <Input
           id="name"
           type="text"
+          label="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="rounded-control bg-surface-1 px-sm py-xs text-text-primary"
         />
 
-        <label htmlFor="domain" className="text-sm text-text-secondary">
-          Domain
-        </label>
-        <input
+        <Input
           id="domain"
           type="text"
+          label="Domain"
           value={domain}
           onChange={(e) => setDomain(e.target.value)}
-          className="rounded-control bg-surface-1 px-sm py-xs text-text-primary"
         />
 
         <Button type="submit">Create project</Button>

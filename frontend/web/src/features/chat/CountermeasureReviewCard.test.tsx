@@ -52,4 +52,11 @@ describe('CountermeasureReviewCard', () => {
     render(<CountermeasureReviewCard countermeasure="Replace belt monthly" onSubmit={vi.fn()} />)
     expect(screen.getByRole('button', { name: /^reject$/i })).toHaveClass('text-danger')
   })
+
+  it('renders the edit field using the shared Input component styling', () => {
+    render(<CountermeasureReviewCard countermeasure="Replace belt monthly" onSubmit={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }))
+    const field = screen.getByRole('textbox', { name: /edit countermeasure/i })
+    expect(field.closest('span')).toHaveClass('focus-within:ring-ring/40')
+  })
 })
