@@ -52,7 +52,7 @@ export function AppLayout({
         <ProjectSidebar currentProjectId={projectId} />
       </aside>
 
-      <main className="overflow-y-auto bg-surface-0">{children}</main>
+      <main className="overflow-hidden bg-surface-0">{children}</main>
 
       {investigationPanelCollapsible && (
         <button

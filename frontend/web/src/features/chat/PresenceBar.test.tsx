@@ -31,4 +31,21 @@ describe('PresenceBar', () => {
     fireEvent.click(screen.getByRole('button', { name: /export report/i }))
     expect(onExportReport).toHaveBeenCalled()
   })
+
+  it('shows the investigation title as the first element when provided', () => {
+    render(
+      <PresenceBar
+        title="Line 3 seal failures"
+        participants={participants}
+        driver={null}
+        onExportReport={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('Line 3 seal failures')).toBeInTheDocument()
+  })
+
+  it('renders nothing for the title when none is provided', () => {
+    render(<PresenceBar participants={participants} driver={null} onExportReport={vi.fn()} />)
+    expect(screen.queryByTestId('presence-bar-title')).not.toBeInTheDocument()
+  })
 })

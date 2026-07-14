@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button'
 import type { PresenceParticipant } from '../../hooks/usePresence'
 
 type PresenceBarProps = {
+  title?: string
   participants: PresenceParticipant[]
   driver: PresenceParticipant | null
   onExportReport: () => void
@@ -18,9 +19,14 @@ function initials(name: string | null): string {
     .slice(0, 2)
 }
 
-export function PresenceBar({ participants, driver, onExportReport }: PresenceBarProps) {
+export function PresenceBar({ title, participants, driver, onExportReport }: PresenceBarProps) {
   return (
     <div className="flex items-center gap-sm border-b border-border px-lg py-sm">
+      {title && (
+        <div data-testid="presence-bar-title" className="text-sm font-medium text-text-primary">
+          {title}
+        </div>
+      )}
       <div className="flex">
         {participants.map((participant, index) => (
           <div

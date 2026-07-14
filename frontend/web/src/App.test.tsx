@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -9,10 +9,21 @@ vi.mock('./features/chat/useConversation', () => ({
   useConversation: (...args: unknown[]) => useConversationMock(...args),
 }))
 
+const useParamsMock = vi.fn(() => ({ id: 'proj-1', investigationId: undefined }))
+const navigateMock = vi.fn()
 vi.mock('react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router')>()
-  return { ...actual, useParams: () => ({ id: 'proj-1' }) }
+  return {
+    ...actual,
+    useParams: () => useParamsMock(),
+    useNavigate: () => navigateMock,
+  }
 })
+
+const useProjectsMock = vi.fn(() => ({ data: undefined }))
+vi.mock('./features/projects/useProjects', () => ({
+  useProjects: () => useProjectsMock(),
+}))
 
 vi.mock('@clerk/react', () => ({
   useAuth: () => ({ getToken: async () => 'test-token' }),
@@ -85,6 +96,9 @@ function setViewport(width: number) {
 
 beforeEach(() => {
   useConversationMock.mockReset()
+  navigateMock.mockReset()
+  useParamsMock.mockReturnValue({ id: 'proj-1', investigationId: undefined })
+  useProjectsMock.mockReturnValue({ data: undefined })
   whyTreeOnNodeClick.current = null
   setViewport(1440)
 })
@@ -129,6 +143,16 @@ describe('App', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('shows the current project name as the presence-bar title', () => {
+    useParamsMock.mockReturnValue({ id: 'proj-1', investigationId: 'inv-1' })
+    useProjectsMock.mockReturnValue({
+      data: [{ id: 'proj-1', name: 'Line 3 seal failures', active_investigation_id: 'inv-1' }],
+    })
+    useConversationMock.mockReturnValue(baseConversation({ investigationId: 'inv-1' }))
+    renderApp()
+    expect(screen.getByTestId('presence-bar-title')).toHaveTextContent('Line 3 seal failures')
+  })
+
   it('renders the WhyTree stub once an investigation exists', () => {
     useConversationMock.mockReturnValue(baseConversation({ investigationId: 'inv-1' }))
     renderApp()
@@ -161,5 +185,109 @@ describe('App', () => {
     whyTreeOnNodeClick.current?.('n1')
 
     expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth' })
+  })
+
+  it('passes the investigationId route param through to useConversation as the initial id', () => {
+    useParamsMock.mockReturnValue({ id: 'proj-1', investigationId: 'inv-9' })
+    useConversationMock.mockReturnValue(baseConversation({ investigationId: 'inv-9' }))
+    renderApp()
+    expect(useConversationMock).toHaveBeenCalledWith('proj-1', 'inv-9')
+  })
+
+  it('redirects to the project\'s active investigation when the URL has no investigationId', () => {
+    useParamsMock.mockReturnValue({ id: 'proj-1', investigationId: undefined })
+    useProjectsMock.mockReturnValue({
+      data: [{ id: 'proj-1', active_investigation_id: 'inv-9' }],
+    })
+    useConversationMock.mockReturnValue(baseConversation())
+    renderApp()
+    expect(navigateMock).toHaveBeenCalledWith('/projects/proj-1/investigations/inv-9', {
+      replace: true,
+    })
+  })
+
+  it('does not redirect when already on an investigation URL', () => {
+    useParamsMock.mockReturnValue({ id: 'proj-1', investigationId: 'inv-9' })
+    useProjectsMock.mockReturnValue({
+      data: [{ id: 'proj-1', active_investigation_id: 'inv-9' }],
+    })
+    useConversationMock.mockReturnValue(baseConversation({ investigationId: 'inv-9' }))
+    renderApp()
+    expect(navigateMock).not.toHaveBeenCalled()
+  })
+
+  it('does not redirect when the project has no active investigation', () => {
+    useParamsMock.mockReturnValue({ id: 'proj-1', investigationId: undefined })
+    useProjectsMock.mockReturnValue({
+      data: [{ id: 'proj-1', active_investigation_id: null }],
+    })
+    useConversationMock.mockReturnValue(baseConversation())
+    renderApp()
+    expect(navigateMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps the composer outside the scrolling chat-thread region', () => {
+    useConversationMock.mockReturnValue(
+      baseConversation({
+        investigationId: 'inv-1',
+        messages: [{ type: 'shallow', role: 'assistant', content: 'Hi there' }],
+      }),
+    )
+    renderApp()
+
+    const scrollRegion = screen.getByTestId('chat-thread-scroll')
+    const composer = screen.getByTestId('chat-composer')
+
+    expect(scrollRegion).toHaveClass('overflow-y-auto')
+    expect(scrollRegion.contains(composer)).toBe(false)
+    expect(scrollRegion).toContainElement(screen.getByText('Hi there'))
+  })
+
+  it('autoscrolls the chat thread to the bottom when a new message arrives', () => {
+    useConversationMock.mockReturnValue(
+      baseConversation({
+        investigationId: 'inv-1',
+        messages: [{ type: 'shallow', role: 'assistant', content: 'Hi there' }],
+      }),
+    )
+    const { rerender } = renderApp()
+
+    const scrollRegion = screen.getByTestId('chat-thread-scroll')
+    Object.defineProperty(scrollRegion, 'scrollHeight', { value: 500, configurable: true })
+    scrollRegion.scrollTop = 0
+
+    useConversationMock.mockReturnValue(
+      baseConversation({
+        investigationId: 'inv-1',
+        messages: [
+          { type: 'shallow', role: 'assistant', content: 'Hi there' },
+          { type: 'shallow', role: 'user', content: 'Another message' },
+        ],
+      }),
+    )
+    rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    expect(scrollRegion.scrollTop).toBe(500)
+  })
+
+  it('navigates to the investigation URL after starting a new investigation', async () => {
+    const startInvestigation = vi.fn().mockResolvedValue('inv-new')
+    useConversationMock.mockReturnValue(baseConversation({ startInvestigation }))
+    renderApp()
+
+    fireEvent.change(screen.getByLabelText(/phenomenon/i), {
+      target: { value: 'Glue overflowed' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /start investigation/i }))
+
+    await waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith('/projects/proj-1/investigations/inv-new'),
+    )
   })
 })
