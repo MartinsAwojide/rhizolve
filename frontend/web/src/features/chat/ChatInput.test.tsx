@@ -42,4 +42,28 @@ describe('ChatInput', () => {
     fireEvent.click(screen.getByRole('button', { name: /force deep/i }))
     expect(onOverride).toHaveBeenCalledWith('deep')
   })
+
+  it('sends on Enter without Shift', () => {
+    const onSubmit = vi.fn()
+    render(<ChatInput mode="shallow" onSubmit={onSubmit} onOverride={vi.fn()} />)
+    const textbox = screen.getByRole('textbox')
+    fireEvent.change(textbox, { target: { value: 'What next?' } })
+    fireEvent.keyDown(textbox, { key: 'Enter', shiftKey: false })
+    expect(onSubmit).toHaveBeenCalledWith('What next?', false)
+  })
+
+  it('does not send on Shift+Enter, allowing a newline instead', () => {
+    const onSubmit = vi.fn()
+    render(<ChatInput mode="shallow" onSubmit={onSubmit} onOverride={vi.fn()} />)
+    const textbox = screen.getByRole('textbox')
+    fireEvent.change(textbox, { target: { value: 'line one' } })
+    fireEvent.keyDown(textbox, { key: 'Enter', shiftKey: true })
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('shows a placeholder and a /btw hint', () => {
+    render(<ChatInput mode="shallow" onSubmit={vi.fn()} onOverride={vi.fn()} />)
+    expect(screen.getByPlaceholderText(/message the investigation/i)).toBeInTheDocument()
+    expect(screen.getByText(/\/btw/)).toBeInTheDocument()
+  })
 })
