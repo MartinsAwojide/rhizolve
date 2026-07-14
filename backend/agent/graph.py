@@ -451,7 +451,7 @@ def _check_complete_router(
     why_node = _find_why_node(state, active["branch_path"]) if active else None
     gemba_result = why_node["gemba_result"] if why_node else None
 
-    if gemba_result == "NOK":
+    if gemba_result in ("NOK", "ROOT_CAUSE"):
         return "root_cause_validator"
 
     if state["pending_hypotheses"]:

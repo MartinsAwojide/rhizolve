@@ -19,7 +19,7 @@ async def submit_gemba_result(
     project_id: str,
     investigation_id: str,
     request: Request,
-    result: Literal["OK", "NOK"] = Form(...),
+    result: Literal["OK", "NOK", "ROOT_CAUSE"] = Form(...),
     notes: str = Form(""),
     files: list[UploadFile] = File(default=[]),
     transcriptions: list[str] = Form(default=[]),
