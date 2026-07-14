@@ -13,7 +13,7 @@ type GembaSubmitPayload = {
 type GembaCheckCardProps = {
   hypothesis: string
   instructions: string
-  onSubmit: (payload: GembaSubmitPayload) => void
+  onSubmit: (payload: GembaSubmitPayload) => void | Promise<void>
 }
 
 const RESULTS: GembaResult[] = ['OK', 'NOK', 'ROOT_CAUSE']
@@ -27,6 +27,7 @@ const RESULT_STATUS: Record<GembaResult, NodeStatus> = {
 export function GembaCheckCard({ hypothesis, instructions, onSubmit }: GembaCheckCardProps) {
   const [result, setResult] = useState<GembaResult | null>(null)
   const [attachments, setAttachments] = useState<File[]>([])
+  const [submitted, setSubmitted] = useState(false)
 
   return (
     <Card data-testid="gemba-check-card">
@@ -49,7 +50,10 @@ export function GembaCheckCard({ hypothesis, instructions, onSubmit }: GembaChec
           </label>
         ))}
       </div>
-      <label className="mt-md block text-text-secondary" htmlFor="gemba-attachment-upload">
+      <label
+        className="mt-md flex flex-col gap-xs text-text-secondary"
+        htmlFor="gemba-attachment-upload"
+      >
         Attachment
         <input
           id="gemba-attachment-upload"
@@ -61,8 +65,12 @@ export function GembaCheckCard({ hypothesis, instructions, onSubmit }: GembaChec
       <Button
         type="button"
         className="mt-md"
-        disabled={!result}
-        onClick={() => result && onSubmit({ result, attachments })}
+        disabled={!result || submitted}
+        onClick={() => {
+          if (!result) return
+          setSubmitted(true)
+          Promise.resolve(onSubmit({ result, attachments })).catch(() => setSubmitted(false))
+        }}
       >
         Submit
       </Button>

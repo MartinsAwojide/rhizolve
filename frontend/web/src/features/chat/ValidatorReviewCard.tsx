@@ -6,11 +6,12 @@ import type { WhyNode } from './types'
 type ValidatorReviewCardProps = {
   node: WhyNode
   confidence?: number
-  onSubmit: (decision: { override: boolean }) => void
+  onSubmit: (decision: { override: boolean }) => void | Promise<void>
 }
 
 export function ValidatorReviewCard({ node, confidence, onSubmit }: ValidatorReviewCardProps) {
   const [override, setOverride] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   return (
     <Card data-testid="validator-review-card">
@@ -41,7 +42,15 @@ export function ValidatorReviewCard({ node, confidence, onSubmit }: ValidatorRev
         />
         Override AI decision
       </label>
-      <Button type="button" className="mt-md" onClick={() => onSubmit({ override })}>
+      <Button
+        type="button"
+        className="mt-md"
+        disabled={submitted}
+        onClick={() => {
+          setSubmitted(true)
+          Promise.resolve(onSubmit({ override })).catch(() => setSubmitted(false))
+        }}
+      >
         Submit
       </Button>
     </Card>
