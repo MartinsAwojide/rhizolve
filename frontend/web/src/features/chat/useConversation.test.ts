@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useConversation } from './useConversation'
 
@@ -18,6 +19,68 @@ describe('useConversation', () => {
     expect(result.current.messages).toEqual([])
     expect(result.current.mode).toBe('shallow')
     expect(result.current.investigationId).toBeNull()
+  })
+
+  it('hydrates investigationId and polls status when given an initialInvestigationId', async () => {
+    const hypotheses = [
+      {
+        hypothesis: 'seal wear',
+        branch_path: 'root.h1',
+        depth: 1,
+        gemba_instructions: 'inspect seal',
+      },
+    ]
+    authFetchMock.mockResolvedValueOnce({
+      investigation_id: 'inv-1',
+      status: 'awaiting_gemba',
+      interrupt_type: 'hypothesis_review',
+      pending_hypotheses: hypotheses,
+      node: null,
+    })
+    const { result } = renderHook(() => useConversation('proj-1', 'inv-1'))
+
+    await waitFor(() =>
+      expect(result.current.messages).toEqual([
+        { type: 'interrupt', interrupt_type: 'hypothesis_review', hypotheses },
+      ]),
+    )
+    expect(result.current.investigationId).toBe('inv-1')
+    expect(authFetchMock).toHaveBeenCalledWith(
+      '/api/v1/projects/proj-1/investigations/inv-1/status',
+    )
+  })
+
+  it('does not duplicate the polled interrupt message under StrictMode double-invocation', async () => {
+    const hypotheses = [
+      {
+        hypothesis: 'seal wear',
+        branch_path: 'root.h1',
+        depth: 1,
+        gemba_instructions: 'inspect seal',
+      },
+    ]
+    authFetchMock.mockResolvedValue({
+      investigation_id: 'inv-1',
+      status: 'awaiting_gemba',
+      interrupt_type: 'hypothesis_review',
+      pending_hypotheses: hypotheses,
+      node: null,
+    })
+    const { result } = renderHook(() => useConversation('proj-1', 'inv-1'), {
+      wrapper: StrictMode,
+    })
+
+    await waitFor(() =>
+      expect(result.current.messages).toEqual([
+        { type: 'interrupt', interrupt_type: 'hypothesis_review', hypotheses },
+      ]),
+    )
+  })
+
+  it('does not hydrate when initialInvestigationId is null', () => {
+    const { result } = renderHook(() => useConversation('proj-1', null))
+    expect(result.current.investigationId).toBeNull()
+    expect(authFetchMock).not.toHaveBeenCalled()
   })
 
   it('appends a user message immediately, then the assistant reply on response', async () => {

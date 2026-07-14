@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuthFetch } from '../../hooks/useAuthFetch'
 import type { ChatMessage, PendingHypothesis, WhyNode } from './types'
 
@@ -26,7 +26,7 @@ type InvestigationStatusBody = {
   node: WhyNode | null
 }
 
-export function useConversation(projectId: string) {
+export function useConversation(projectId: string, initialInvestigationId?: string | null) {
   const authFetch = useAuthFetch()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [btwMessages, setBtwMessages] = useState<ChatMessage[]>([])
@@ -35,6 +35,7 @@ export function useConversation(projectId: string) {
   const [investigationId, setInvestigationId] = useState<string | null>(null)
   const overriddenRef = useRef(false)
   const threadIdRef = useRef('default')
+  const hydratedInvestigationIdRef = useRef<string | null>(null)
 
   const overrideMode = useCallback((next: ChatMode) => {
     overriddenRef.current = true
@@ -144,6 +145,15 @@ export function useConversation(projectId: string) {
     [authFetch, projectId],
   )
 
+  useEffect(() => {
+    if (!initialInvestigationId) return
+    setInvestigationId(initialInvestigationId)
+    if (hydratedInvestigationIdRef.current === initialInvestigationId) return
+    hydratedInvestigationIdRef.current = initialInvestigationId
+    pollStatus(initialInvestigationId)
+    // pollStatus is stable per projectId/authFetch — safe to omit from deps here.
+  }, [initialInvestigationId, pollStatus])
+
   const startInvestigation = useCallback(
     async (phenomenonMessage: string) => {
       const data: ChatResponseBody = await authFetch('/api/v1/chat', {
@@ -161,6 +171,7 @@ export function useConversation(projectId: string) {
         setInvestigationId(data.investigation_id)
         await pollStatus(data.investigation_id)
       }
+      return data.investigation_id ?? null
     },
     [authFetch, projectId, pollStatus],
   )
