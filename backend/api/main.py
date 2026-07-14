@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 
+import openai
 import redis.asyncio as redis
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from redis.exceptions import RedisError
 
 from agent.five_whys_agent import FiveWhysAgent
@@ -83,6 +85,14 @@ app.include_router(conflicts_router, prefix="/api/v1/projects")
 app.include_router(dashboard_router, prefix="/api/v1/dashboard")
 app.include_router(why_tree_router, prefix="/api/v1/projects")
 app.include_router(investigation_status_router, prefix="/api/v1/projects")
+
+
+@app.exception_handler(openai.APIError)
+async def openai_error_handler(request: Request, exc: openai.APIError) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "AI service temporarily unavailable. Please try again shortly."},
+    )
 
 
 @app.get("/api/v1/health")
