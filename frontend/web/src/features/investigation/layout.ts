@@ -15,7 +15,9 @@ export type XYFlowEdge = {
   type: 'step'
 }
 
-const NODE_WIDTH = 220
+// NODE_WIDTH includes the OK/NOK gemba badge rendered outside the box
+// (see WhyNode.tsx), so columns don't overlap when a badge is present.
+const NODE_WIDTH = 290
 const NODE_HEIGHT = 120
 
 type TreeItem = {
@@ -51,7 +53,10 @@ export function buildTreeLayout(nodes: WhyNode[]): {
   edges: XYFlowEdge[]
 } {
   const root = hierarchy(buildHierarchy(nodes), (d) => d.children)
-  const layout = tree<TreeItem>().nodeSize([NODE_WIDTH, NODE_HEIGHT])(root)
+  // Swap nodeSize dims and swap x/y below to lay the tree out left-to-right
+  // (depth = columns, siblings = rows), matching the standard 5-Whys matrix
+  // (Phenomenon -> Why(1) -> Why(2) -> ...) instead of d3's default top-down.
+  const layout = tree<TreeItem>().nodeSize([NODE_HEIGHT, NODE_WIDTH])(root)
 
   const xyNodes: XYFlowNode[] = []
   const edges: XYFlowEdge[] = []
@@ -61,7 +66,7 @@ export function buildTreeLayout(nodes: WhyNode[]): {
     xyNodes.push({
       id: descendant.data.id,
       type: 'whyNode',
-      position: { x: descendant.x, y: descendant.y },
+      position: { x: descendant.y, y: descendant.x },
       data: { node: descendant.data.node },
     })
     const parent = descendant.parent

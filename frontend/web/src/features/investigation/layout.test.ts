@@ -51,7 +51,7 @@ describe('buildTreeLayout', () => {
     expect(edges).toEqual([])
   })
 
-  it('places deeper nodes further along the depth axis than their parent', () => {
+  it('places deeper nodes further along the horizontal depth axis than their parent (left-to-right, matching the standard 5-Whys matrix)', () => {
     const nodes: WhyNode[] = [
       makeNode({ id: 'n1', branch_path: 'root.h1', depth: 1 }),
       makeNode({ id: 'n2', branch_path: 'root.h1.h1', depth: 2 }),
@@ -59,6 +59,17 @@ describe('buildTreeLayout', () => {
     const { nodes: xyNodes } = buildTreeLayout(nodes)
     const parent = xyNodes.find((n) => n.id === 'n1')!
     const child = xyNodes.find((n) => n.id === 'n2')!
-    expect(child.position.y).toBeGreaterThan(parent.position.y)
+    expect(child.position.x).toBeGreaterThan(parent.position.x)
+  })
+
+  it('spreads sibling branches along the vertical axis, not the depth axis', () => {
+    const nodes: WhyNode[] = [
+      makeNode({ id: 'n1', branch_path: 'root.h1', depth: 1 }),
+      makeNode({ id: 'n2', branch_path: 'root.h2', depth: 1 }),
+    ]
+    const { nodes: xyNodes } = buildTreeLayout(nodes)
+    const [a, b] = xyNodes
+    expect(a.position.x).toBe(b.position.x)
+    expect(a.position.y).not.toBe(b.position.y)
   })
 })

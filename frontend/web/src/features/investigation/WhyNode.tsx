@@ -17,19 +17,41 @@ const STATUS_CLASS: Record<string, string> = {
   conflict: 'border-node-conflict',
 }
 
+const GEMBA_BADGE: Record<'OK' | 'NOK', string> = {
+  OK: 'bg-success text-on-accent',
+  NOK: 'bg-danger text-on-accent',
+}
+
+function gembaBadgeLabel(result: WhyNodeType['gemba_result']): 'OK' | 'NOK' | null {
+  if (result === 'OK') return 'OK'
+  if (result === 'NOK' || result === 'ROOT_CAUSE') return 'NOK'
+  return null
+}
+
 export function WhyNode({ data }: NodeProps<WhyNodeFlowNode>) {
   const { node } = data
   const status = deriveNodeStatus(node)
+  const badgeLabel = gembaBadgeLabel(node.gemba_result)
 
   return (
-    <div
-      data-testid="why-node"
-      data-status={status}
-      className={`rounded-card border-2 bg-surface-2 p-sm text-sm text-text-primary ${STATUS_CLASS[status]}`}
-    >
-      <Handle type="target" position={Position.Top} />
-      {node.hypothesis}
-      <Handle type="source" position={Position.Bottom} />
+    <div className="flex items-center gap-sm">
+      <div
+        data-testid="why-node"
+        data-status={status}
+        className={`rounded-card border-2 bg-surface-2 p-sm text-sm text-text-primary ${STATUS_CLASS[status]}`}
+      >
+        <Handle type="target" position={Position.Left} />
+        {node.hypothesis}
+        <Handle type="source" position={Position.Right} />
+      </div>
+      {badgeLabel && (
+        <span
+          data-testid="why-node-gemba-badge"
+          className={`rounded-pill px-sm py-xs text-xs font-medium ${GEMBA_BADGE[badgeLabel]}`}
+        >
+          {badgeLabel}
+        </span>
+      )}
     </div>
   )
 }

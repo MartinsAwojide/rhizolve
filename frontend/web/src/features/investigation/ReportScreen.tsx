@@ -65,19 +65,31 @@ function FaultTree({ whyNodes }: { whyNodes: WhyNode[] }) {
             />
           )
         })}
+        {Array.from(positioned.entries()).map(([id, { x, y, node }]) => {
+          const size = node.is_root_cause ? 32 : 26
+          return (
+            <g key={id}>
+              <g transform={`translate(${x - size / 2}, ${y - size / 2})`}>
+                <NodeStatusMarker status={deriveNodeStatus(node)} size={size} />
+              </g>
+              <text
+                x={x}
+                y={y + size / 2 + 14}
+                textAnchor="middle"
+                className="fill-text-secondary text-[9px]"
+              >
+                {truncateLabel(node.hypothesis)}
+              </text>
+            </g>
+          )
+        })}
       </svg>
-      {Array.from(positioned.entries()).map(([id, { x, y, node }]) => (
-        <div
-          key={id}
-          className="absolute flex w-[110px] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-xs"
-          style={{ left: x, top: y }}
-        >
-          <NodeStatusMarker status={deriveNodeStatus(node)} size={node.is_root_cause ? 32 : 26} />
-          <span className="text-center text-xs text-text-secondary">{node.hypothesis}</span>
-        </div>
-      ))}
     </div>
   )
+}
+
+function truncateLabel(text: string, maxLength = 28): string {
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text
 }
 
 type ReportScreenProps = {

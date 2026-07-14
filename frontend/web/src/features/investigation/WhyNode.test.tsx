@@ -54,4 +54,30 @@ describe('WhyNode', () => {
     renderNode(node)
     expect(screen.getByTestId('why-node')).toHaveAttribute('data-status', expected)
   })
+
+  it('shows no gemba badge while a hypothesis is still pending', () => {
+    renderNode(baseNode)
+    expect(screen.queryByTestId('why-node-gemba-badge')).not.toBeInTheDocument()
+  })
+
+  it('shows a green OK badge when the gemba check passed (ruled out)', () => {
+    renderNode({ ...baseNode, gemba_result: 'OK' })
+    const badge = screen.getByTestId('why-node-gemba-badge')
+    expect(badge).toHaveTextContent('OK')
+    expect(badge).toHaveClass('bg-success')
+  })
+
+  it('shows a red NOK badge when the gemba check failed (confirmed)', () => {
+    renderNode({ ...baseNode, gemba_result: 'NOK' })
+    const badge = screen.getByTestId('why-node-gemba-badge')
+    expect(badge).toHaveTextContent('NOK')
+    expect(badge).toHaveClass('bg-danger')
+  })
+
+  it('shows a red NOK badge for a ROOT_CAUSE gemba result', () => {
+    renderNode({ ...baseNode, gemba_result: 'ROOT_CAUSE' })
+    const badge = screen.getByTestId('why-node-gemba-badge')
+    expect(badge).toHaveTextContent('NOK')
+    expect(badge).toHaveClass('bg-danger')
+  })
 })
